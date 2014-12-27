@@ -1,0 +1,3 @@
+[![Build Status](https://travis-ci.org/s9e/SourceOptimizer.png?branch=master)](https://travis-ci.org/s9e/SourceOptimizer)
+[![Coverage Status](https://coveralls.io/repos/s9e/SourceOptimizer/badge.png)](https://coveralls.io/r/s9e/SourceOptimizer)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/s9e/SourceOptimizer/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/s9e/SourceOptimizer/?branch=master)

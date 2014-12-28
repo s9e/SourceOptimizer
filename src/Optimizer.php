@@ -27,36 +27,46 @@ class Optimizer
 	/**
 	* Disable an optimization pass
 	*
-	* @param  string $pass Name of the optimization pass
+	* @param  string $passName Name of the optimization pass
 	* @return void
 	*/
-	public function disable($pass, array $options = [])
+	public function disable($passName)
 	{
-		unset($this->passes[$pass]);
+		unset($this->passes[$passName]);
+	}
+
+	/**
+	* Disable all optimization passes
+	*
+	* @return void
+	*/
+	public function disableAll()
+	{
+		$this->passes = [];
 	}
 
 	/**
 	* Enable an optimization pass
 	*
-	* @param  string $pass    Name of the optimization pass
-	* @param  array  $options Options to be set on the pass instance
+	* @param  string $passName Name of the optimization pass
+	* @param  array  $options  Options to be set on the pass instance
 	* @return void
 	*/
-	public function enable($pass, array $options = [])
+	public function enable($passName, array $options = [])
 	{
-		$className = __NAMESPACE__ . '\\Passes\\' . $pass;
+		$className = __NAMESPACE__ . '\\Passes\\' . $passName;
 
 		if (!class_exists($className))
 		{
-			trigger_error("Pass '" . $pass . "' does not exist");
+			trigger_error("Pass '" . $passName . "' does not exist");
 
 			return;
 		}
 
-		$this->passes[$pass] = new $className;
+		$this->passes[$passName] = new $className;
 		foreach ($options as $optionName => $optionValue)
 		{
-			$this->passes[$pass]->$optionName = $optionValue;
+			$this->passes[$passName]->$optionName = $optionValue;
 		}
 	}
 

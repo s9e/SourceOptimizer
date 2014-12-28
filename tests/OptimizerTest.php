@@ -6,7 +6,7 @@ use PHPUnit_Framework_TestCase;
 use s9e\SourceOptimizer\Optimizer;
 
 /**
-* @covers s9e\SourceOptimizer\Optimize
+* @covers s9e\SourceOptimizer\Optimizer
 */
 class OptimizerTest extends PHPUnit_Framework_TestCase
 {

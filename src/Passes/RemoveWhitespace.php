@@ -12,6 +12,26 @@ use s9e\SourceOptimizer\Pass;
 class RemoveWhitespace extends Pass
 {
 	/**
+	* @var string[] List of exact triplet of tokens to exclude from minification
+	*/
+	public $excludeExact = [
+		// 1 - - 1 and 1 + + 1 should not become 1--1 or 1++1
+		'- -',
+		'+ +',
+		// $a - --$b should not become $a---$b
+		'- --',
+		'+ ++'
+	];
+
+	/**
+	* @var string[] List of regexps used to exclude from minification
+	*/
+	public $excludeRegexp = [
+		// throw new should not become thrownew
+		'(^\\w+ \\w)'
+	];
+
+	/**
 	* @var bool Whether to remove all possible whitespace from the source
 	*/
 	public $removeAllWhitespace = false;
@@ -47,24 +67,22 @@ class RemoveWhitespace extends Pass
 				continue;
 			}
 
-			// Get the last character before whitespace and two characters after it
+			// Build a string that contain the tokens adjacent to this whitespace
 			$str = '';
 			if (isset($tokens[$i - 1]))
 			{
-				$prevToken = (is_array($tokens[$i - 1])) ? $tokens[$i - 1][1] : $tokens[$i - 1];
-				$str .= substr($prevToken, -1);
+				$str .= (is_array($tokens[$i - 1])) ? $tokens[$i - 1][1] : $tokens[$i - 1];
 			}
+			$str .= ' ';
 			if (isset($tokens[$i + 1]))
 			{
-				$nextToken = (is_array($tokens[$i + 1])) ? $tokens[$i + 1][1] : $tokens[$i + 1];
-				$str .= substr($nextToken, 0, 2);
+				$str .= (is_array($tokens[$i + 1])) ? $tokens[$i + 1][1] : $tokens[$i + 1];
 			}
 
 			$shouldRemove = false;
 			$ws = $tokens[$i][1];
 
-			// Do not remove whitespace in "$a+ ++$b" or "$a- --$b" or "throw new"
-			if (!preg_match('([-+]{3}|\\w{3})', $str))
+			if (!$this->isExcluded($str))
 			{
 				if ($this->removeAllWhitespace)
 				{
@@ -95,5 +113,29 @@ class RemoveWhitespace extends Pass
 		}
 
 		return $reparse;
+	}
+
+	/**
+	* Test whether given string should be excluded from minification
+	*
+	* @param  string $str Triplet of tokens, e.g. "$a +"
+	* @return bool
+	*/
+	protected function isExcluded($str)
+	{
+		if (in_array($str, $this->excludeExact, true))
+		{
+			return true;
+		}
+
+		foreach ($this->excludeRegexp as $regexp)
+		{
+			if (preg_match($regexp, $str))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

@@ -2,7 +2,7 @@
 
 function stuff()
 {
-	echo "this is stuff()";
+	echo"this is stuff()";
 }
 $foo=42;
 if($foo>1)

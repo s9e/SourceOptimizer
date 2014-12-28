@@ -36,7 +36,7 @@ abstract class PassTest extends PHPUnit_Framework_TestCase
 			$tests[] = [
 				file_get_contents($original),
 				file_get_contents($optimized),
-				(file_exists($options)) ? file_get_contents($options) : []
+				(file_exists($options)) ? json_decode(file_get_contents($options), true) : []
 			];
 		}
 

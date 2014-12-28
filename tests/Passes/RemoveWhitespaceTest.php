@@ -10,17 +10,4 @@ use s9e\SourceOptimizer\Tests\PassTest;
 */
 class RemoveWhitespaceTest extends PassTest
 {
-	public function getOptimizeTests()
-	{
-		return [
-			[
-				'<?php
-
-				$foo = 42;',
-				'<?php
-
-				$foo=42;'
-			]
-		];
-	}
 }

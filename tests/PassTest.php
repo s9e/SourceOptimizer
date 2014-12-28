@@ -22,5 +22,24 @@ abstract class PassTest extends PHPUnit_Framework_TestCase
 		$this->assertSame($expected, $optimizer->optimize($src));
 	}
 
-	abstract public function getOptimizeTests();
+	public function getOptimizeTests()
+	{
+		$thisName = get_class($this);
+		$passName = substr($thisName, 1 + strrpos($thisName, '\\'), -4);
+
+		$tests = [];
+		foreach (glob(__DIR__ . '/Passes/' . $passName . '/*.original.php') as $original)
+		{
+			$optimized = preg_replace('(riginal.php$)', 'ptimized.php', $original);
+			$options   = preg_replace('(riginal.php$)', 'ptions.json', $original);
+
+			$tests[] = [
+				file_get_contents($original),
+				file_get_contents($optimized),
+				(file_exists($options)) ? file_get_contents($options) : []
+			];
+		}
+
+		return $tests;
+	}
 }

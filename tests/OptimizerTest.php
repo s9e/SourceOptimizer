@@ -24,8 +24,10 @@ class OptimizerTest extends PHPUnit_Framework_TestCase
 		return [
 			[
 				'<?php
+
 				$foo = 42;',
 				'<?php
+
 				$foo=42;'
 			]
 		];

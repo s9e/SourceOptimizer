@@ -1,4 +1,10 @@
 <?php
 
-$a=1;
-var_dump($a+ +1,$a);
+try
+{
+	throw new Exception;
+}
+catch(Exception$e)
+{
+	var_dump(serialize($e));
+}

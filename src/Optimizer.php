@@ -2,7 +2,7 @@
 
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014 The s9e Authors
+* @copyright Copyright (c) 2014-2015 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -21,6 +21,7 @@ class Optimizer
 	*/
 	public function __construct()
 	{
+		$this->enable('RemoveComments');
 		$this->enable('RemoveWhitespace');
 	}
 
@@ -78,28 +79,20 @@ class Optimizer
 	*/
 	public function optimize($old)
 	{
-		$new            = $old;
 		$remainingLoops = 2;
-		$reparse        = false;
-		$tokens         = $this->parse($old);
+		$new = $old;
+
+		$stream = new TokenStream($old);
 		do
 		{
 			$old = $new;
 			foreach ($this->passes as $pass)
 			{
-				if ($reparse)
-				{
-					$tokens = $this->parse($this->serialize($tokens));
-				}
-
-				$reparse = false;
-				foreach ($pass->getBlocks($tokens) as list($start, $end))
-				{
-					$reparse |= $pass->optimize($tokens, $start, $end);
-				}
+				$stream->reset();
+				$pass->optimize($stream);
 			}
 
-			$new = $this->serialize($tokens);
+			$new = $stream->serialize();
 		}
 		while (--$remainingLoops > 0 && $new !== $old);
 
@@ -107,38 +100,31 @@ class Optimizer
 	}
 
 	/**
-	* 
+	* Optimize a PHP file
 	*
-	* @param  string              $src
-	* @return array<array|string>
+	* @param  string $filepath Path to the file
+	* @return void
 	*/
-	protected function parse($src)
+	public function optimizeDir($path)
 	{
-		$tokens = token_get_all($src);
-		foreach ($tokens as &$token)
-		{
-			if (is_array($token))
-			{
-				unset($token[3]);
-			}
-		}
-
-		return $tokens;
+		array_map([$this, 'optimizeFile'], glob($path . '/*.php'));
+		array_map([$this, 'optimizeDir'], glob($path . '/*', GLOB_ONLYDIR));
 	}
 
 	/**
-	* 
+	* Optimize all .php files in given directory and its subdirectories
 	*
-	* @return string
+	* @param  string $filepath Path to the file
+	* @return void
 	*/
-	protected function serialize(&$tokens)
+	public function optimizeFile($filepath)
 	{
-		$src = '';
-		foreach ($tokens as $token)
-		{
-			$src .= (is_array($token)) ? $token[1] : $token;
-		}
+		$old = file_get_contents($filepath);
+		$new = $this->optimize($old);
 
-		return $src;
+		if ($new !== $old)
+		{
+			file_put_contents($filepath, $new);
+		}
 	}
 }

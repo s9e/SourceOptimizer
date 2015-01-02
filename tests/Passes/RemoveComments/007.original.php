@@ -1,0 +1,4 @@
+<?php
+
+/** @docblock */
+echo "here";

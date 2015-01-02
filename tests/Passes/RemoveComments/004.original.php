@@ -2,7 +2,7 @@
 
 try
 {
-	throw new Exception;
+	throw/**/new/**/Exception;
 }
 catch (Exception $e)
 {

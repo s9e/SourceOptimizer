@@ -2,12 +2,13 @@
 
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014 The s9e Authors
+* @copyright Copyright (c) 2014-2015 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
 
 use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
 
 class RemoveWhitespace extends Pass
 {
@@ -52,35 +53,17 @@ class RemoveWhitespace extends Pass
 	public $removeSameLineWhitespace = true;
 
 	/**
-	* 
-	*
-	* @return void
+	* {@inheritdoc}
 	*/
-	public function optimize(array &$tokens, $start, $end)
+	public function optimize(TokenStream $stream)
 	{
-		$reparse = false;
-		$i = $start - 1;
-		while (++$i <= $end)
+		while ($stream->skipTo(T_WHITESPACE))
 		{
-			if ($tokens[$i][0] !== T_WHITESPACE)
-			{
-				continue;
-			}
-
 			// Build a string that contain the tokens adjacent to this whitespace
-			$str = '';
-			if (isset($tokens[$i - 1]))
-			{
-				$str .= (is_array($tokens[$i - 1])) ? $tokens[$i - 1][1] : $tokens[$i - 1];
-			}
-			$str .= ' ';
-			if (isset($tokens[$i + 1]))
-			{
-				$str .= (is_array($tokens[$i + 1])) ? $tokens[$i + 1][1] : $tokens[$i + 1];
-			}
+			$str = $stream->getText(-1) . ' ' . $stream->getText(1);
 
 			$shouldRemove = false;
-			$ws = $tokens[$i][1];
+			$ws = $stream->getText();
 
 			if (!$this->isExcluded($str))
 			{
@@ -95,8 +78,7 @@ class RemoveWhitespace extends Pass
 			}
 			if ($shouldRemove)
 			{
-				unset($tokens[$i]);
-				$reparse = true;
+				$stream->remove();
 				continue;
 			}
 
@@ -109,10 +91,8 @@ class RemoveWhitespace extends Pass
 				$ws = preg_replace('(\\n[ \\t]+)', "\n", $ws);
 			}
 
-			$tokens[$i][1] = $ws;
+			$stream->replace([T_WHITESPACE, $ws]);
 		}
-
-		return $reparse;
 	}
 
 	/**

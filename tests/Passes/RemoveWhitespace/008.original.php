@@ -2,9 +2,9 @@
 
 try
 {
-	throw new Exception;
+	throw new \Exception;
 }
-catch (Exception $e)
+catch (\Exception $e)
 {
 	var_dump(serialize($e));
 }

@@ -1,0 +1,14 @@
+#!/bin/sh
+ROOT=$(dirname $(dirname $(realpath $0)))
+
+cd "$ROOT"
+
+if [[ -n `git diff --cached --name-only -b "src" "tests" | grep php` ]]
+then
+	phpunit --stop-on-failure
+
+	if [ $? -ne 0 ]
+	then
+		exit 1;
+	fi
+fi

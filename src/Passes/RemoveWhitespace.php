@@ -13,26 +13,6 @@ use s9e\SourceOptimizer\TokenStream;
 class RemoveWhitespace extends Pass
 {
 	/**
-	* @var string[] List of exact triplet of tokens to exclude from minification
-	*/
-	public $excludeExact = [
-		// 1 - - 1 and 1 + + 1 should not become 1--1 or 1++1
-		'- -',
-		'+ +',
-		// $a - --$b should not become $a---$b
-		'- --',
-		'+ ++'
-	];
-
-	/**
-	* @var string[] List of regexps used to exclude from minification
-	*/
-	public $excludeRegexp = [
-		// throw new should not become thrownew
-		'(^\\w+ \\w)'
-	];
-
-	/**
 	* @var bool Whether to remove all possible whitespace from the source
 	*/
 	public $removeAllWhitespace = false;
@@ -59,13 +39,10 @@ class RemoveWhitespace extends Pass
 	{
 		while ($stream->skipTo(T_WHITESPACE))
 		{
-			// Build a string that contain the tokens adjacent to this whitespace
-			$str = $stream->getText(-1) . ' ' . $stream->getText(1);
-
 			$shouldRemove = false;
-			$ws = $stream->getText();
+			$ws = $stream->currentText();
 
-			if (!$this->isExcluded($str))
+			if ($stream->canRemoveCurrentToken())
 			{
 				if ($this->removeAllWhitespace)
 				{
@@ -93,29 +70,5 @@ class RemoveWhitespace extends Pass
 
 			$stream->replace([T_WHITESPACE, $ws]);
 		}
-	}
-
-	/**
-	* Test whether given string should be excluded from minification
-	*
-	* @param  string $str Triplet of tokens, e.g. "$a +"
-	* @return bool
-	*/
-	protected function isExcluded($str)
-	{
-		if (in_array($str, $this->excludeExact, true))
-		{
-			return true;
-		}
-
-		foreach ($this->excludeRegexp as $regexp)
-		{
-			if (preg_match($regexp, $str))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

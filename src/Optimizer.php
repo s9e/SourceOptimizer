@@ -79,7 +79,7 @@ class Optimizer
 	*/
 	public function optimize($old)
 	{
-		$remainingLoops = 2;
+		$remainingLoops = 1;
 		$new = $old;
 
 		$stream = new TokenStream($old);

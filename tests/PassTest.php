@@ -40,6 +40,7 @@ abstract class PassTest extends PHPUnit_Framework_TestCase
 			];
 		}
 
+//		return array_slice($tests,25);
 		return $tests;
 	}
 }

@@ -1,0 +1,18 @@
+<?php
+if($foo)
+{
+}
+else
+{
+	if($bar)
+	{
+	}
+	else
+	{
+		if($baz)
+		{
+			baz();
+			baz();
+		}
+	}
+}

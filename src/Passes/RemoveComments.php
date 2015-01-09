@@ -52,8 +52,9 @@ class RemoveComments extends Pass
 	}
 
 	/**
-	* 
+	* Remove all docblocks tokens from given stream
 	*
+	* @param  TokenStream $stream
 	* @return void
 	*/
 	protected function removeDocBlocksFrom(TokenStream $stream)
@@ -61,7 +62,7 @@ class RemoveComments extends Pass
 		$stream->reset();
 		while ($stream->skipTo(T_DOC_COMMENT))
 		{
-			if ($this->isExcluded($stream->getText()))
+			if ($this->isExcluded($stream->currentText()))
 			{
 				continue;
 			}
@@ -71,20 +72,18 @@ class RemoveComments extends Pass
 	}
 
 	/**
-	* 
+	* Remove current comment token from given stream
 	*
+	* @param  TokenStream $stream
 	* @return void
 	*/
 	protected function removeComment(TokenStream $stream)
 	{
-		$isPrecededByWhitespace = $stream->isPrecededByWhitespace();
-		$isFollowedByWhitespace = $stream->isFollowedByWhitespace();
+		$prevToken = $stream->lookbehind();
+		$nextToken = $stream->lookahead();
 
-		// If the comment is surrounded by whitespace, we remove the latter
-		if ($isPrecededByWhitespace && $isFollowedByWhitespace)
-		{
-			$stream->remove(1);
-		}
+		$isPrecededByWhitespace = (is_array($prevToken) && $prevToken[0] === T_WHITESPACE);
+		$isFollowedByWhitespace = (is_array($nextToken) && $nextToken[0] === T_WHITESPACE);
 
 		// Replace this comment with whitespace if it's not preceeded or followed by whitespace
 		if (!$isPrecededByWhitespace && !$isFollowedByWhitespace)
@@ -95,11 +94,19 @@ class RemoveComments extends Pass
 		{
 			$stream->remove();
 		}
+		$stream->next();
+
+		// If the comment is surrounded by whitespace, we remove the latter
+		if ($isPrecededByWhitespace && $isFollowedByWhitespace)
+		{
+			$stream->remove();
+		}
 	}
 
 	/**
-	* 
+	* Remove single-line and/or multi-line comments from given stream
 	*
+	* @param  TokenStream $stream
 	* @return void
 	*/
 	protected function removeCommentsFrom(TokenStream $stream)
@@ -107,7 +114,7 @@ class RemoveComments extends Pass
 		$stream->reset();
 		while ($stream->skipTo(T_COMMENT))
 		{
-			$comment = $stream->getText();
+			$comment = $stream->currentText();
 			if ($comment[1] === '/' && !$this->removeSingleLineComments)
 			{
 				continue;
@@ -116,7 +123,7 @@ class RemoveComments extends Pass
 			{
 				continue;
 			}
-			if ($this->isExcluded($stream->getText()))
+			if ($this->isExcluded($stream->currentText()))
 			{
 				continue;
 			}

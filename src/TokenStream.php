@@ -140,7 +140,7 @@ class TokenStream implements ArrayAccess, Iterator
 	/**
 	* Remove the token stored at given offset
 	*
-	* @return bool
+	* @return void
 	*/
 	public function offsetUnset($offset)
 	{

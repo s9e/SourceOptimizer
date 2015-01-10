@@ -55,7 +55,7 @@ class EnforceFQN extends Pass
 	protected function processFunctionCall()
 	{
 		$funcOffset = $this->stream->key() - 1;
-		if (!isset($this->stream[$funcOffset]) || $this->stream[$funcOffset][0] !== T_STRING)
+		if ($this->stream[$funcOffset][0] !== T_STRING)
 		{
 			return;
 		}
@@ -70,26 +70,15 @@ class EnforceFQN extends Pass
 		$offset = $funcOffset;
 		while (--$offset > 0)
 		{
-			if (!isset($this->stream[$offset]))
-			{
-				return;
-			}
-
 			// Ignore if preceded by "function", "new", "\", "->" or "::"
 			$tokenValue = $this->stream[$offset][0];
-			if ($tokenValue === T_FUNCTION
-			 || $tokenValue === T_NEW
-			 || $tokenValue === T_NS_SEPARATOR
-			 || $tokenValue === T_OBJECT_OPERATOR
-			 || $tokenValue === T_PAAMAYIM_NEKUDOTAYIM)
+			if (in_array($tokenValue, [T_FUNCTION, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM], true))
 			{
 				return;
 			}
 
 			// Stop looking once we found a token that's not whitespace or comment
-			if ($tokenValue !== T_WHITESPACE
-			 && $tokenValue !== T_COMMENT
-			 && $tokenValue !== T_DOC_COMMENT)
+			if (!in_array($tokenValue, [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE], true))
 			{
 				break;
 			}

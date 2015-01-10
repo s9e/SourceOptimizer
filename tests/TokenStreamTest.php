@@ -165,4 +165,43 @@ class TokenStreamTest extends PHPUnit_Framework_TestCase
 		$stream->seek(2);
 		$this->assertTrue($stream->canRemoveCurrentToken(2));
 	}
+
+	/**
+	* @testdox isNoise() returns TRUE for whitespace
+	*/
+	public function testIsNoiseWhitespace()
+	{
+		$stream = new TokenStream('<?php /** Comment */ // Comment');
+		$stream->seek(2);
+		$this->assertTrue($stream->isNoise());
+	}
+
+	/**
+	* @testdox isNoise() returns TRUE for comments
+	*/
+	public function testIsNoiseComment()
+	{
+		$stream = new TokenStream('<?php /** Comment */ // Comment');
+		$stream->seek(3);
+		$this->assertTrue($stream->isNoise());
+	}
+
+	/**
+	* @testdox isNoise() returns TRUE for docblocks
+	*/
+	public function testIsNoiseDocblock()
+	{
+		$stream = new TokenStream('<?php /** Comment */ // Comment');
+		$stream->seek(1);
+		$this->assertTrue($stream->isNoise());
+	}
+
+	/**
+	* @testdox isNoise() returns FALSE for other tokens
+	*/
+	public function testIsNoiseFalse()
+	{
+		$stream = new TokenStream('<?php /** Comment */ // Comment');
+		$this->assertFalse($stream->isNoise());
+	}
 }

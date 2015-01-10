@@ -341,9 +341,9 @@ class OptimizeControlStructures extends Pass
 		$this->stream->seek($start);
 		while ($this->stream->key() <= $end)
 		{
-			$token = $this->stream->current();
-			if ($token[0] === T_WHITESPACE || $token[0] === T_DOC_COMMENT)
+			if ($this->stream->isNoise())
 			{
+				$token = $this->stream->current();
 				$token[1] = preg_replace("/^(?:    |\t)/m", '', $token[1]);
 				$this->stream->replace($token);
 			}

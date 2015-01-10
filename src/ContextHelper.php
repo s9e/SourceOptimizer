@@ -33,17 +33,15 @@ abstract class ContextHelper
 			while ($stream->valid())
 			{
 				$token = $stream->current();
-				$stream->next();
-				if ($token === ';' || $token === '{')
+				if (in_array($stream->current(), [';', '{'], true))
 				{
 					break;
 				}
-				if ($token[0] !== T_WHITESPACE
-				 && $token[0] !== T_COMMENT
-				 && $token[0] !== T_DOC_COMMENT)
+				if (!$stream->isNoise())
 				{
 					$namespace .= $token[1];
 				}
+				$stream->next();
 			}
 			$namespaces[$offset] = $namespace;
 		}

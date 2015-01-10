@@ -179,6 +179,16 @@ class TokenStream implements ArrayAccess, Iterator
 	}
 
 	/**
+	* Test whether current token is noise (whitespace or comment)
+	*
+	* @return bool
+	*/
+	public function isNoise()
+	{
+		return in_array($this->tokens[$this->offset][0], [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE], true);
+	}
+
+	/**
 	* Return the offset of current token
 	*
 	* @return integer
@@ -359,15 +369,13 @@ class TokenStream implements ArrayAccess, Iterator
 	*/
 	public function skipNoise()
 	{
-		// Tokens that we wish to skip
-		$tokens = [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE];
-		while ($this->offset < $this->cnt)
+		while ($this->valid())
 		{
-			if (!in_array($this->tokens[$this->offset][0], $tokens, true))
+			if (!$this->isNoise())
 			{
 				break;
 			}
-			++$this->offset;
+			$this->next();
 		}
 	}
 

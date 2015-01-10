@@ -23,6 +23,7 @@ abstract class ContextHelper
 		{
 			$offset = $stream->key();
 			$stream->next();
+			$stream->skipNoise();
 			$namespace = '';
 			while ($stream->valid())
 			{
@@ -31,11 +32,9 @@ abstract class ContextHelper
 				{
 					break;
 				}
-				if (!$stream->isNoise())
-				{
-					$namespace .= $token[1];
-				}
+				$namespace .= $token[1];
 				$stream->next();
+				$stream->skipNoise();
 			}
 			$namespaces[$offset] = $namespace;
 		}

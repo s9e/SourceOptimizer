@@ -260,6 +260,23 @@ class TokenStream implements ArrayAccess, Iterator
 	}
 
 	/**
+	* Move to the previous token in the stream
+	*
+	* @return void
+	*/
+	public function previous()
+	{
+		while ($this->offset > 0)
+		{
+			--$this->offset;
+			if (isset($this->tokens[$this->offset]))
+			{
+				break;
+			}
+		}
+	}
+
+	/**
 	* Remove current token
 	*
 	* @return void

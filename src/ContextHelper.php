@@ -19,21 +19,15 @@ abstract class ContextHelper
 	{
 		$namespaces = [''];
 		$stream->reset();
-		while ($stream->valid())
+		while ($stream->skipTo(T_NAMESPACE))
 		{
-			$token = $stream->current();
 			$offset = $stream->key();
 			$stream->next();
-			if ($token[0] !== T_NAMESPACE)
-			{
-				continue;
-			}
-
 			$namespace = '';
 			while ($stream->valid())
 			{
 				$token = $stream->current();
-				if (in_array($stream->current(), [';', '{'], true))
+				if (in_array($token, [';', '{'], true))
 				{
 					break;
 				}

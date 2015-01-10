@@ -28,6 +28,10 @@ class ContextHelperTest extends PHPUnit_Framework_TestCase
 				'<?php namespace foo; $a=2; namespace bar\\baz; $b=3;',
 				['', 1 => 'foo', 11 => 'bar\\baz']
 			],
+			[
+				'<?php namespace foo {} namespace bar\\baz {}',
+				['', 1 => 'foo', 8 => 'bar\\baz']
+			],
 		];
 	}
 }

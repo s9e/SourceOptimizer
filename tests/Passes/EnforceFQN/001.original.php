@@ -1,3 +1,6 @@
 <?php
 namespace foo;
-new stdClass();
+if (0)
+{
+	new stdClass();
+}

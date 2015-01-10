@@ -34,7 +34,7 @@ abstract class ContextHelper
 			{
 				$token = $stream->current();
 				$stream->next();
-				if ($token === ';')
+				if ($token === ';' || $token === '{')
 				{
 					break;
 				}

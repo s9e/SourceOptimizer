@@ -7,6 +7,7 @@
 */
 namespace s9e\SourceOptimizer\Passes;
 
+use s9e\SourceOptimizer\ContextHelper;
 use s9e\SourceOptimizer\Pass;
 use s9e\SourceOptimizer\TokenStream;
 
@@ -38,12 +39,49 @@ class EnforceFQN extends Pass
 	public function optimize(TokenStream $stream)
 	{
 		$this->stream = $stream;
-		foreach ($stream as $token)
+		$this->optimizeFunctionCalls();
+	}
+
+	/**
+	* Optimize the function calls in stored stream
+	*
+	* @return void
+	*/
+	protected function optimizeFunctionCalls()
+	{
+		// Collect the namespaces and add an entry that serves as an upper bound
+		$namespaces = ContextHelper::getNamespaces($this->stream);
+		$namespaces[PHP_INT_MAX] = '_';
+		foreach ($namespaces as $offset => $namespace)
 		{
+			if (isset($startOffset))
+			{
+				$this->optimizeFunctionCallsBlock($startOffset, $offset - 1);
+				unset($startOffset);
+			}
+			if ($namespace !== '')
+			{
+				$startOffset = $offset;
+			}
+		}
+	}
+
+	/**
+	* 
+	*
+	* @return void
+	*/
+	protected function optimizeFunctionCallsBlock($startOffset, $endOffset)
+	{
+		$this->stream->seek($startOffset);
+		while ($this->stream->valid() && $this->stream->key() <= $endOffset)
+		{
+			$token = $this->stream->current();
 			if ($token === '(')
 			{
 				$this->processFunctionCall();
 			}
+			$this->stream->next();
 		}
 	}
 

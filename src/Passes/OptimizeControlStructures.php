@@ -57,11 +57,7 @@ class OptimizeControlStructures extends Pass
 	*/
 	protected function isControlStructure()
 	{
-		return in_array(
-			$this->stream->currentValue(),
-			[T_ELSE, T_ELSEIF, T_FOR, T_FOREACH, T_IF, T_WHILE],
-			true
-		);
+		return $this->stream->isAny([T_ELSE, T_ELSEIF, T_FOR, T_FOREACH, T_IF, T_WHILE]);
 	}
 
 	/**
@@ -75,7 +71,7 @@ class OptimizeControlStructures extends Pass
 		$this->stream->seek($structure['offsetLeftBrace']);
 		$this->stream->next();
 		$this->stream->skipNoise();
-		if ($this->stream->currentValue() !== T_IF)
+		if (!$this->stream->is(T_IF))
 		{
 			return;
 		}
@@ -133,9 +129,9 @@ class OptimizeControlStructures extends Pass
 	protected function parseControlStructure()
 	{
 		$structure = [
-			'isElse'           => ($this->stream->currentValue() === T_ELSE),
-			'isElseif'         => ($this->stream->currentValue() === T_ELSEIF),
-			'isIf'             => ($this->stream->currentValue() === T_IF),
+			'isElse'           => $this->stream->is(T_ELSE),
+			'isElseif'         => $this->stream->is(T_ELSEIF),
+			'isIf'             => $this->stream->is(T_IF),
 			'offsetConstruct'  => $this->stream->key(),
 			'offsetLeftBrace'  => null,
 			'offsetRightBrace' => null,
@@ -181,8 +177,7 @@ class OptimizeControlStructures extends Pass
 			}
 			elseif ($this->isControlStructure())
 			{
-				if ($this->stream->currentValue() !== T_ELSE
-				 && $this->stream->currentValue() !== T_ELSEIF)
+				if (!$this->stream->isAny([T_ELSE, T_ELSEIF]))
 				{
 					++$structure['statements'];
 				}
@@ -224,7 +219,7 @@ class OptimizeControlStructures extends Pass
 			$this->stream->skipNoise();
 			if ($this->stream->valid())
 			{
-				$isFollowedByElse = in_array($this->stream->currentValue(), [T_ELSE, T_ELSEIF], true);
+				$isFollowedByElse = $this->stream->isAny([T_ELSE, T_ELSEIF]);
 			}
 		}
 
@@ -285,8 +280,7 @@ class OptimizeControlStructures extends Pass
 		}
 
 		$this->stream->seek($offset - 1);
-		if ($this->stream->currentValue() === T_WHITESPACE
-		 && $this->stream->canRemoveCurrentToken())
+		if ($this->stream->is(T_WHITESPACE) && $this->stream->canRemoveCurrentToken())
 		{
 			$this->stream->remove();
 		}

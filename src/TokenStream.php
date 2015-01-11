@@ -104,6 +104,28 @@ class TokenStream implements ArrayAccess, Iterator
 	}
 
 	/**
+	* Test whether current token is the given type of token
+	*
+	* @param  integer $tokenValue
+	* @return bool
+	*/
+	public function is($tokenValue)
+	{
+		return ($this->tokens[$this->offset][0] === $tokenValue);
+	}
+
+	/**
+	* Test whether current token is any of the given types of token
+	*
+	* @param  integer[] $tokenValues
+	* @return bool
+	*/
+	public function isAny(array $tokenValues)
+	{
+		return in_array($this->tokens[$this->offset][0], $tokenValues, true);
+	}
+
+	/**
 	* Test whether there's a token at given offset
 	*
 	* @param  integer $offset
@@ -166,16 +188,6 @@ class TokenStream implements ArrayAccess, Iterator
 	public function currentText()
 	{
 		return (is_array($this->tokens[$this->offset])) ? $this->tokens[$this->offset][1] : $this->tokens[$this->offset];
-	}
-
-	/**
-	* Get current token's value
-	*
-	* @return integer|string Token's value if applicable, or the token's text otherwise
-	*/
-	public function currentValue()
-	{
-		return (is_array($this->tokens[$this->offset])) ? $this->tokens[$this->offset][0] : $this->tokens[$this->offset];
 	}
 
 	/**

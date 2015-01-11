@@ -53,16 +53,16 @@ class RemoveWhitespace extends Pass
 	*/
 	protected function getRegexp()
 	{
-		$remove = [];
 		if ($this->removeBlankLines)
 		{
-			$remove[] = '\\s*\\n';
-		}
-		if ($this->removeIndentation)
-		{
-			$remove[] = '[ \\t]+';
+			return ($this->removeIndentation) ? '(\\n\\s+)' : '(\\n\\s*\\n)';
 		}
 
-		return '(\\n(?:' . implode('|', $remove) . '))';
+		if ($this->removeIndentation)
+		{
+			return '(\\n[ \\t]+)';
+		}
+
+		return '((?!))';
 	}
 }

@@ -23,6 +23,8 @@ class Optimizer
 	{
 		$this->enable('RemoveComments');
 		$this->enable('RemoveWhitespace');
+		$this->enable('EnforceFQN');
+		$this->enable('OptimizeControlStructures');
 	}
 
 	/**

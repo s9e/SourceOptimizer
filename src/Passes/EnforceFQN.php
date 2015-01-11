@@ -43,6 +43,33 @@ class EnforceFQN extends Pass
 	}
 
 	/**
+	* Test whether the token at given offset is preceded by any token of given values
+	*
+	* @param  integer   $offset
+	* @param  integer[] $tokenValues
+	* @return bool
+	*/
+	protected function isPrecededBy($offset, array $tokenValues)
+	{
+		while (--$offset > 0)
+		{
+			$tokenValue = $this->stream[$offset][0];
+			if (in_array($tokenValue, $tokenValues, true))
+			{
+				return true;
+			}
+
+			// Stop looking once we found a token that's not whitespace or comment
+			if (!in_array($tokenValue, [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE], true))
+			{
+				break;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	* Optimize the function calls in stored stream
 	*
 	* @return void
@@ -67,8 +94,10 @@ class EnforceFQN extends Pass
 	}
 
 	/**
-	* 
+	* Optimize all function calls in given range
 	*
+	* @param  integer $startOffset
+	* @param  integer $endOffset
 	* @return void
 	*/
 	protected function optimizeFunctionCallsBlock($startOffset, $endOffset)
@@ -104,26 +133,12 @@ class EnforceFQN extends Pass
 			return;
 		}
 
-		$savedOffset = $this->stream->key();
-		$offset = $funcOffset;
-		while (--$offset > 0)
+		// Ignore if preceded by "function", "new", "\", "->" or "::"
+		if ($this->isPrecededBy($funcOffset, [T_FUNCTION, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM]))
 		{
-			// Ignore if preceded by "function", "new", "\", "->" or "::"
-			$tokenValue = $this->stream[$offset][0];
-			if (in_array($tokenValue, [T_FUNCTION, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM], true))
-			{
-				return;
-			}
-
-			// Stop looking once we found a token that's not whitespace or comment
-			if (!in_array($tokenValue, [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE], true))
-			{
-				break;
-			}
+			return;
 		}
 
-		$this->stream->seek($funcOffset);
-		$this->stream->replace([T_STRING, '\\' . $funcName]);
-		$this->stream->seek($savedOffset);
+		$this->stream[$funcOffset] = [T_STRING, '\\' . $funcName];
 	}
 }

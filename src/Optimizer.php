@@ -15,7 +15,7 @@ class Optimizer
 	protected $passes = [];
 
 	/**
-	* 
+	* Constructor
 	*
 	* @return void
 	*/
@@ -72,37 +72,27 @@ class Optimizer
 	}
 
 	/**
-	* 
+	* Optimize given source
 	*
-	* @param  string $old Original source code
+	* @param  string $php Original source code
 	* @return string      Optimize source code
 	*/
-	public function optimize($old)
+	public function optimize($php)
 	{
-		$remainingLoops = 1;
-		$new = $old;
-
-		$stream = new TokenStream($old);
-		do
+		$stream = new TokenStream($php);
+		foreach ($this->passes as $pass)
 		{
-			$old = $new;
-			foreach ($this->passes as $pass)
-			{
-				$stream->reset();
-				$pass->optimize($stream);
-			}
-
-			$new = $stream->serialize();
+			$stream->reset();
+			$pass->optimize($stream);
 		}
-		while (--$remainingLoops > 0 && $new !== $old);
 
-		return $new;
+		return $stream->serialize();
 	}
 
 	/**
-	* Optimize a PHP file
+	* Optimize all .php files in given directory and its subdirectories
 	*
-	* @param  string $filepath Path to the file
+	* @param  string $path Path to the dir
 	* @return void
 	*/
 	public function optimizeDir($path)
@@ -112,7 +102,7 @@ class Optimizer
 	}
 
 	/**
-	* Optimize all .php files in given directory and its subdirectories
+	* Optimize a PHP file
 	*
 	* @param  string $filepath Path to the file
 	* @return void

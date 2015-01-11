@@ -37,38 +37,40 @@ class RemoveWhitespace extends Pass
 	*/
 	public function optimize(TokenStream $stream)
 	{
+		$regexp = $this->getRegexp();
 		while ($stream->skipTo(T_WHITESPACE))
 		{
-			$shouldRemove = false;
 			$ws = $stream->currentText();
-
 			if ($stream->canRemoveCurrentToken())
 			{
-				if ($this->removeAllWhitespace)
+				if ($this->removeAllWhitespace || ($this->removeSameLineWhitespace && strpos($ws, "\n") === false))
 				{
-					$shouldRemove = true;
-				}
-				if ($this->removeSameLineWhitespace && strpos($ws, "\n") === false)
-				{
-					$shouldRemove = true;
+					$stream->remove();
+					continue;
 				}
 			}
-			if ($shouldRemove)
-			{
-				$stream->remove();
-				continue;
-			}
 
-			if ($this->removeBlankLines)
-			{
-				$ws = preg_replace('(\\n\\s*\\n)', "\n", $ws);
-			}
-			if ($this->removeIndentation)
-			{
-				$ws = preg_replace('(\\n[ \\t]+)', "\n", $ws);
-			}
-
-			$stream->replace([T_WHITESPACE, $ws]);
+			$stream->replace([T_WHITESPACE, preg_replace($regexp, "\n", $ws)]);
 		}
+	}
+
+	/**
+	* Generate the regexp that corresponds to the removal options
+	*
+	* @return string
+	*/
+	protected function getRegexp()
+	{
+		$remove = [];
+		if ($this->removeBlankLines)
+		{
+			$remove[] = '\\s*\\n';
+		}
+		if ($this->removeIndentation)
+		{
+			$remove[] = '[ \\t]+';
+		}
+
+		return '(\\n(?:' . implode('|', $remove) . '))';
 	}
 }

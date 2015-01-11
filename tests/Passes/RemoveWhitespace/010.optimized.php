@@ -1,5 +1,6 @@
 <?php
-if(1)
+$❤='<3';
+if($❤ or 0)
 {
-echo"ok";
+	echo$❤;
 }

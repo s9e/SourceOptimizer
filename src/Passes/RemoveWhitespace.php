@@ -13,11 +13,6 @@ use s9e\SourceOptimizer\TokenStream;
 class RemoveWhitespace extends Pass
 {
 	/**
-	* @var bool Whether to remove all possible whitespace from the source
-	*/
-	public $removeAllWhitespace = false;
-
-	/**
 	* @var bool Whether to remove blank lines from the source
 	*/
 	public $removeBlankLines = true;
@@ -41,13 +36,10 @@ class RemoveWhitespace extends Pass
 		while ($stream->skipTo(T_WHITESPACE))
 		{
 			$ws = $stream->currentText();
-			if ($stream->canRemoveCurrentToken())
+			if ($this->removeSameLineWhitespace && strpos($ws, "\n") === false && $stream->canRemoveCurrentToken())
 			{
-				if ($this->removeAllWhitespace || ($this->removeSameLineWhitespace && strpos($ws, "\n") === false))
-				{
-					$stream->remove();
-					continue;
-				}
+				$stream->remove();
+				continue;
 			}
 
 			$stream->replace([T_WHITESPACE, preg_replace($regexp, "\n", $ws)]);

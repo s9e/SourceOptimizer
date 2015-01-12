@@ -173,11 +173,11 @@ class TokenStream implements ArrayAccess, Iterator
 	/**
 	* Return the current token
 	*
-	* @return array|string
+	* @return array|string|null
 	*/
 	public function current()
 	{
-		return $this->tokens[$this->offset];
+		return (isset($this->tokens[$this->offset])) ? $this->tokens[$this->offset] : null;
 	}
 
 	/**

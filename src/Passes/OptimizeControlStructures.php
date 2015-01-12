@@ -95,6 +95,11 @@ class OptimizeControlStructures extends Pass
 			$this->optimizeStructures($structure['structures']);
 		}
 
+		if ($structure['isIf'] || $structure['isElseif'])
+		{
+			$this->markPreservedBraces($structure['offsetRightBrace']);
+		}
+
 		if ($structure['statements'] <= 1
 		 && isset($structure['offsetRightBrace'])
 		 && !isset($this->preservedBraces[$structure['offsetRightBrace']]))
@@ -237,11 +242,6 @@ class OptimizeControlStructures extends Pass
 	*/
 	protected function removeBraces(array $structure)
 	{
-		if ($structure['isIf'] || $structure['isElseif'])
-		{
-			$this->markPreservedBraces($structure['offsetRightBrace']);
-		}
-
 		// Replace the opening brace with a semicolon if the control structure is empty, remove the
 		// brace if possible or replace it with whitespace otherwise (e.g. in "else foreach")
 		$this->stream->seek($structure['offsetLeftBrace']);

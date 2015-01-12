@@ -178,10 +178,6 @@ class OptimizeControlStructures extends Pass
 			{
 				++$structure['statements'];
 			}
-			elseif ($token === '{')
-			{
-				++$braces;
-			}
 			elseif ($token === '}')
 			{
 				--$braces;
@@ -189,6 +185,10 @@ class OptimizeControlStructures extends Pass
 				{
 					break;
 				}
+			}
+			elseif (in_array($token, ['{', [T_CURLY_OPEN, '{'], [T_DOLLAR_OPEN_CURLY_BRACES, '${']], true))
+			{
+				++$braces;
 			}
 			elseif ($this->isControlStructure())
 			{

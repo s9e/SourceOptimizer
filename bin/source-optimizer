@@ -521,14 +521,14 @@ class OptimizeControlStructures extends Pass
 			$token=$this->stream->current();
 			if($token===';')
 				++$structure['statements'];
-			elseif($token==='{')
-				++$braces;
 			elseif($token==='}')
 			{
 				--$braces;
 				if(!$braces)
 					break;
 			}
+			elseif(\in_array($token,['{',[\T_CURLY_OPEN,'{'],[\T_DOLLAR_OPEN_CURLY_BRACES,'${']],\true))
+				++$braces;
 			elseif($this->isControlStructure())
 			{
 				if(!$this->stream->isAny([\T_ELSE,\T_ELSEIF]))

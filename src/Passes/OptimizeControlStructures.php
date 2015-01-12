@@ -53,6 +53,17 @@ class OptimizeControlStructures extends Pass
 	}
 
 	/**
+	* Test whether the given structure's braces can be removed
+	*
+	* @param  array $structure
+	* @return bool
+	*/
+	protected function canRemoveBracesFrom(array $structure)
+	{
+		return ($structure['statements'] <= 1 && !isset($this->preservedBraces[$structure['offsetRightBrace']]));
+	}
+
+	/**
 	* Test whether the token at current offset is a control structure
 	*
 	* NOTE: we ignore T_DO since the braces are not optional
@@ -94,17 +105,14 @@ class OptimizeControlStructures extends Pass
 	*/
 	protected function optimizeStructure(array $structure)
 	{
-		if ($structure['structures'])
-		{
-			$this->optimizeStructures($structure['structures']);
-		}
+		$this->optimizeStructures($structure['structures']);
 
 		if ($structure['isIf'] || $structure['isElseif'])
 		{
 			$this->markPreservedBraces($structure['offsetRightBrace']);
 		}
 
-		if ($structure['statements'] <= 1 && !isset($this->preservedBraces[$structure['offsetRightBrace']]))
+		if ($this->canRemoveBracesFrom($structure))
 		{
 			if ($structure['isElse'])
 			{

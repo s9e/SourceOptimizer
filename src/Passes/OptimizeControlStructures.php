@@ -95,14 +95,17 @@ class OptimizeControlStructures extends Pass
 			$this->optimizeStructures($structure['structures']);
 		}
 
+		if (!isset($structure['offsetRightBrace']))
+		{
+			return;
+		}
+
 		if ($structure['isIf'] || $structure['isElseif'])
 		{
 			$this->markPreservedBraces($structure['offsetRightBrace']);
 		}
 
-		if ($structure['statements'] <= 1
-		 && isset($structure['offsetRightBrace'])
-		 && !isset($this->preservedBraces[$structure['offsetRightBrace']]))
+		if ($structure['statements'] <= 1 && !isset($this->preservedBraces[$structure['offsetRightBrace']]))
 		{
 			if ($structure['isElse'])
 			{

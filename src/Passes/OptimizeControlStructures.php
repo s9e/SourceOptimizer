@@ -76,6 +76,16 @@ class OptimizeControlStructures extends Pass
 	}
 
 	/**
+	* Test whether the token at current offset is an open curly brace
+	*
+	* @return bool
+	*/
+	protected function isCurlyOpen()
+	{
+		return ($this->stream->current() === '{' || $this->stream->isAny([T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES]));
+	}
+
+	/**
 	* Optimize given T_ELSE structure
 	*
 	* @param  array $structure
@@ -186,7 +196,7 @@ class OptimizeControlStructures extends Pass
 					break;
 				}
 			}
-			elseif (in_array($token, ['{', [T_CURLY_OPEN, '{'], [T_DOLLAR_OPEN_CURLY_BRACES, '${']], true))
+			elseif ($this->isCurlyOpen())
 			{
 				++$braces;
 			}

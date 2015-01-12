@@ -465,6 +465,10 @@ class OptimizeControlStructures extends Pass
 	{
 		return$this->stream->isAny([\T_ELSE,\T_ELSEIF,\T_FOR,\T_FOREACH,\T_IF,\T_WHILE]);
 	}
+	protected function isCurlyOpen()
+	{
+		return($this->stream->current()==='{'||$this->stream->isAny([\T_CURLY_OPEN,\T_DOLLAR_OPEN_CURLY_BRACES]));
+	}
 	protected function optimizeElse(array$structure)
 	{
 		$this->stream->seek($structure['offsetLeftBrace']);
@@ -527,7 +531,7 @@ class OptimizeControlStructures extends Pass
 				if(!$braces)
 					break;
 			}
-			elseif(\in_array($token,['{',[\T_CURLY_OPEN,'{'],[\T_DOLLAR_OPEN_CURLY_BRACES,'${']],\true))
+			elseif($this->isCurlyOpen())
 				++$braces;
 			elseif($this->isControlStructure())
 			{

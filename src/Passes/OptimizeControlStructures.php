@@ -40,7 +40,11 @@ class OptimizeControlStructures extends Pass
 		{
 			if ($this->isControlStructure())
 			{
-				$structures[] = $this->parseControlStructure();
+				$structure = $this->parseControlStructure();
+				if ($structure)
+				{
+					$structures[] = $structure;
+				}
 			}
 			$this->stream->next();
 		}
@@ -95,11 +99,6 @@ class OptimizeControlStructures extends Pass
 			$this->optimizeStructures($structure['structures']);
 		}
 
-		if (!isset($structure['offsetRightBrace']))
-		{
-			return;
-		}
-
 		if ($structure['isIf'] || $structure['isElseif'])
 		{
 			$this->markPreservedBraces($structure['offsetRightBrace']);
@@ -132,7 +131,7 @@ class OptimizeControlStructures extends Pass
 	/**
 	* Parse the control structure starting at current offset
 	*
-	* @return array
+	* @return array|false
 	*/
 	protected function parseControlStructure()
 	{
@@ -159,7 +158,7 @@ class OptimizeControlStructures extends Pass
 
 		if ($this->stream->current() !== '{')
 		{
-			return $structure;
+			return false;
 		}
 
 		$braces = 0;
@@ -190,7 +189,11 @@ class OptimizeControlStructures extends Pass
 					++$structure['statements'];
 				}
 
-				$structure['structures'][] = $this->parseControlStructure();
+				$innerStructure = $this->parseControlStructure();
+				if ($innerStructure)
+				{
+					$structure['structures'][] = $innerStructure;
+				}
 			}
 
 			$this->stream->next();

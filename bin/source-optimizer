@@ -1,0 +1,728 @@
+#!/usr/bin/php
+<?php
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer;
+class CommandLineRunner
+{
+	public static function autoload()
+	{
+		if(!\class_exists(__NAMESPACE__.'\\Optimizer'))
+			self::preload(__DIR__);
+	}
+	public static function run()
+	{
+		self::autoload();
+		$optimizer=new Optimizer;
+		foreach(self::getTargets()as$path)
+		{
+			if(!\file_exists($path))
+			{
+				echo"$path not found\n";
+				continue;
+			}
+			$methodName=(\is_dir($path))?'optimizeDir':'optimizeFile';
+			$optimizer->$methodName($path);
+		}
+	}
+	protected static function getTargets()
+	{
+		return \array_slice($_SERVER['argv'],1);
+	}
+	protected static function preload($dir)
+	{
+		foreach(\glob($dir.'/[A-Z]*.php')as$path)
+			include_once$path;
+		\array_map(__METHOD__,\glob($dir.'/*',\GLOB_ONLYDIR));
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer;
+abstract class ContextHelper
+{
+	public static function getNamespaces(TokenStream$stream)
+	{
+		$namespaces=[''];
+		$stream->reset();
+		while($stream->skipTo(\T_NAMESPACE))
+		{
+			$offset=$stream->key();
+			$stream->next();
+			$stream->skipNoise();
+			$namespace='';
+			while($stream->valid())
+			{
+				$token=$stream->current();
+				if(\in_array($token,[';','{'],\true))
+					break;
+				$namespace.=$token[1];
+				$stream->next();
+				$stream->skipNoise();
+			}
+			$namespaces[$offset]=$namespace;
+		}
+		return$namespaces;
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer;
+class Optimizer
+{
+	protected$passes=[];
+	public function __construct()
+	{
+		$this->enable('RemoveComments');
+		$this->enable('RemoveWhitespace');
+		$this->enable('EnforceFQN');
+		$this->enable('OptimizeControlStructures');
+	}
+	public function disable($passName)
+	{
+		unset($this->passes[$passName]);
+	}
+	public function disableAll()
+	{
+		$this->passes=[];
+	}
+	public function enable($passName,array$options=[])
+	{
+		$className=__NAMESPACE__.'\\Passes\\'.$passName;
+		if(!\class_exists($className))
+		{
+			\trigger_error("Pass '".$passName."' does not exist");
+			return;
+		}
+		$this->passes[$passName]=new$className;
+		foreach($options as$optionName=>$optionValue)
+			$this->passes[$passName]->$optionName=$optionValue;
+	}
+	public function optimize($php)
+	{
+		$stream=new TokenStream($php);
+		foreach($this->passes as$pass)
+		{
+			$stream->reset();
+			$pass->optimize($stream);
+		}
+		return$stream->serialize();
+	}
+	public function optimizeDir($path)
+	{
+		\array_map([$this,'optimizeFile'],\glob($path.'/*.php'));
+		\array_map([$this,'optimizeDir'],\glob($path.'/*',\GLOB_ONLYDIR));
+	}
+	public function optimizeFile($filepath)
+	{
+		$old=\file_get_contents($filepath);
+		$new=$this->optimize($old);
+		if($new!==$old)
+			\file_put_contents($filepath,$new);
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer;
+abstract class Pass
+{
+	abstract public function optimize(TokenStream$stream);
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer;
+use ArrayAccess;
+use Iterator;
+class TokenStream implements ArrayAccess,Iterator
+{
+	protected$cnt;
+	protected$excludeExact=[
+		'- -',
+		'+ +',
+		'- --',
+		'+ ++'
+	];
+	public$needsReparsing;
+	protected$offset;
+	protected$sparse;
+	protected$tokens;
+	public function __construct($src)
+	{
+		$this->parse($src);
+	}
+	public function canRemoveCurrentToken()
+	{
+		$prevToken=$this->lookbehind();
+		$nextToken=$this->lookahead();
+		if($prevToken===\false||$nextToken===\false)
+			return \true;
+		if(\is_array($prevToken))
+		{
+			if($prevToken[0]===\T_COMMENT&&\substr($prevToken[1],0,2)==='//')
+				return \false;
+			$prevToken=$prevToken[1];
+		}
+		if(\is_array($nextToken))
+			$nextToken=$nextToken[1];
+		$str=$prevToken.' '.$nextToken;
+		if(\in_array($str,$this->excludeExact,\true))
+			return \false;
+		$delimiters="\t\n\r !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~";
+		$prevChar=\substr($prevToken,-1);
+		$nextChar=$nextToken[0];
+		return(\strpos($delimiters,$prevChar)!==\false||\strpos($delimiters,$nextChar)!==\false);
+	}
+	public function is($tokenValue)
+	{
+		return($this->tokens[$this->offset][0]===$tokenValue);
+	}
+	public function isAny(array$tokenValues)
+	{
+		return \in_array($this->tokens[$this->offset][0],$tokenValues,\true);
+	}
+	public function offsetExists($offset)
+	{
+		return isset($this->tokens[$offset]);
+	}
+	public function offsetGet($offset)
+	{
+		return$this->tokens[$offset];
+	}
+	public function offsetSet($offset,$token)
+	{
+		$this->tokens[$offset]=$token;
+	}
+	public function offsetUnset($offset)
+	{
+		unset($this->tokens[$offset]);
+		$this->sparse=\true;
+	}
+	public function current()
+	{
+		return$this->tokens[$this->offset];
+	}
+	public function currentText()
+	{
+		return(\is_array($this->tokens[$this->offset]))?$this->tokens[$this->offset][1]:$this->tokens[$this->offset];
+	}
+	public function isNoise()
+	{
+		return \in_array($this->tokens[$this->offset][0],[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true);
+	}
+	public function key()
+	{
+		return$this->offset;
+	}
+	public function lookahead()
+	{
+		$i=$this->offset;
+		while(++$i<$this->cnt)
+			if(isset($this->tokens[$i]))
+				return$this->tokens[$i];
+		return \false;
+	}
+	public function lookbehind()
+	{
+		$i=$this->offset;
+		while(--$i>=0)
+			if(isset($this->tokens[$i]))
+				return$this->tokens[$i];
+		return \false;
+	}
+	public function next()
+	{
+		while(++$this->offset<$this->cnt&&!isset($this->tokens[$this->offset]));
+	}
+	protected function parse($src)
+	{
+		$this->tokens=\token_get_all($src);
+		foreach($this->tokens as&$token)
+			if(\is_array($token))
+				unset($token[2]);
+		$this->cnt=\count($this->tokens);
+		$this->offset=0;
+		$this->needsReparsing=\false;
+		$this->sparse=\false;
+	}
+	public function previous()
+	{
+		while($this->offset>0)
+		{
+			--$this->offset;
+			if(isset($this->tokens[$this->offset]))
+				break;
+		}
+	}
+	public function remove()
+	{
+		$this->offsetUnset($this->offset);
+	}
+	public function replace($token)
+	{
+		$this->offsetSet($this->offset,$token);
+	}
+	public function reset()
+	{
+		$this->offset=0;
+		if($this->needsReparsing)
+			$this->parse($this->serialize());
+		elseif($this->sparse)
+			$this->tokens=\array_values($this->tokens);
+	}
+	public function rewind()
+	{
+		$this->reset();
+	}
+	public function seek($offset)
+	{
+		$this->offset=$offset;
+	}
+	public function serialize()
+	{
+		$src='';
+		foreach($this->tokens as$token)
+			$src.=(\is_array($token))?$token[1]:$token;
+		return$src;
+	}
+	public function skipNoise()
+	{
+		while($this->valid())
+		{
+			if(!$this->isNoise())
+				break;
+			$this->next();
+		}
+	}
+	public function skipWhitespace()
+	{
+		while($this->offset<$this->cnt)
+		{
+			if($this->tokens[$this->offset][0]!==\T_WHITESPACE)
+				break;
+			++$this->offset;
+		}
+	}
+	public function skipTo($tokenValue)
+	{
+		while(++$this->offset<$this->cnt)
+			if(isset($this->tokens[$this->offset][0])&&$this->tokens[$this->offset][0]===$tokenValue)
+				return \true;
+		return \false;
+	}
+	public function skipToToken($token)
+	{
+		while(++$this->offset<$this->cnt)
+			if(isset($this->tokens[$this->offset])&&$this->tokens[$this->offset]===$token)
+				return \true;
+		return \false;
+	}
+	public function valid()
+	{
+		return($this->offset<$this->cnt);
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+if(\php_sapi_name()!=='cli')
+	die("This script must be run in command-line interface\n");
+if(!\class_exists('s9e\\SourceOptimizer\\CommandLineRunner'))
+	include __DIR__.'/CommandLineRunner.php';
+\s9e\SourceOptimizer\CommandLineRunner::run();
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\ContextHelper;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class EnforceFQN extends Pass
+{
+	protected$constants;
+	protected$functions;
+	protected$stream;
+	public function __construct()
+	{
+		$this->constants=\get_defined_constants();
+		$this->functions=\array_flip(\get_defined_functions()['internal']);
+	}
+	public function optimize(TokenStream$stream)
+	{
+		$this->stream=$stream;
+		$namespaces=ContextHelper::getNamespaces($this->stream);
+		$namespaces[\PHP_INT_MAX]='_';
+		foreach($namespaces as$offset=>$namespace)
+		{
+			if(isset($startOffset))
+			{
+				$this->optimizeConstants($startOffset,$offset-1);
+				$this->optimizeFunctionCalls($startOffset,$offset-1);
+				unset($startOffset);
+			}
+			if($namespace!=='')
+				$startOffset=$offset;
+		}
+	}
+	protected function isPrecededBy($offset,array$tokenValues)
+	{
+		while(--$offset>0)
+		{
+			$tokenValue=$this->stream[$offset][0];
+			if(\in_array($tokenValue,$tokenValues,\true))
+				return \true;
+			if(!\in_array($tokenValue,[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true))
+				break;
+		}
+		return \false;
+	}
+	protected function optimizeConstants($startOffset,$endOffset)
+	{
+		$this->stream->seek($startOffset);
+		while($this->stream->skipTo(\T_STRING)&&$this->stream->key()<=$endOffset)
+			$this->processConstant();
+	}
+	protected function optimizeFunctionCalls($startOffset,$endOffset)
+	{
+		$this->stream->seek($startOffset);
+		while($this->stream->skipToToken('(')&&$this->stream->key()<=$endOffset)
+			$this->processFunctionCall();
+	}
+	protected function processConstant()
+	{
+		$constName=$this->stream->currentText();
+		if(!isset($this->constants[$constName])&&!\preg_match('(^(?:false|null|true)$)Di',$constName))
+			return;
+		if($this->isPrecededBy($this->stream->key(),[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE]))
+			return;
+		$this->stream->replace([\T_STRING,'\\'.$constName]);
+	}
+	protected function processFunctionCall()
+	{
+		$funcOffset=$this->stream->key()-1;
+		if($this->stream[$funcOffset][0]!==\T_STRING)
+			return;
+		$funcName=$this->stream[$funcOffset][1];
+		if(!isset($this->functions[$funcName]))
+			return;
+		if($this->isPrecededBy($funcOffset,[\T_FUNCTION,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM]))
+			return;
+		$this->stream[$funcOffset]=[\T_STRING,'\\'.$funcName];
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class OptimizeControlStructures extends Pass
+{
+	protected$preservedBraces;
+	protected$stream;
+	public function optimize(TokenStream$stream)
+	{
+		$this->preservedBraces=[];
+		$this->stream=$stream;
+		$structures=[];
+		while($this->stream->valid())
+		{
+			if($this->isControlStructure())
+			{
+				$structure=$this->parseControlStructure();
+				if($structure)
+					$structures[]=$structure;
+			}
+			$this->stream->next();
+		}
+		$this->optimizeStructures($structures);
+	}
+	protected function canRemoveBracesFrom(array$structure)
+	{
+		return($structure['statements']<=1&&!isset($this->preservedBraces[$structure['offsetRightBrace']]));
+	}
+	protected function isControlStructure()
+	{
+		return$this->stream->isAny([\T_ELSE,\T_ELSEIF,\T_FOR,\T_FOREACH,\T_IF,\T_WHILE]);
+	}
+	protected function optimizeElse(array$structure)
+	{
+		$this->stream->seek($structure['offsetLeftBrace']);
+		$this->stream->next();
+		$this->stream->skipNoise();
+		if(!$this->stream->is(\T_IF))
+			return;
+		$this->stream->replace([\T_ELSEIF,'elseif']);
+		$this->unindentBlock($structure['offsetLeftBrace']+1,$structure['offsetRightBrace']-1);
+		$this->stream->seek($structure['offsetConstruct']);
+		$this->stream->remove();
+		$this->removeWhitespaceBefore($this->stream->key());
+	}
+	protected function optimizeStructure(array$structure)
+	{
+		$this->optimizeStructures($structure['structures']);
+		if($structure['isIf']||$structure['isElseif'])
+			$this->markPreservedBraces($structure['offsetRightBrace']);
+		if($this->canRemoveBracesFrom($structure))
+		{
+			if($structure['isElse'])
+				$this->optimizeElse($structure);
+			$this->removeBraces($structure);
+		}
+	}
+	protected function optimizeStructures(array$structures)
+	{
+		foreach($structures as$structure)
+			$this->optimizeStructure($structure);
+	}
+	protected function parseControlStructure()
+	{
+		$structure=[
+			'isElse'=>$this->stream->is(\T_ELSE),
+			'isElseif'=>$this->stream->is(\T_ELSEIF),
+			'isIf'=>$this->stream->is(\T_IF),
+			'offsetConstruct'=>$this->stream->key(),
+			'offsetLeftBrace'=>\null,
+			'offsetRightBrace'=>\null,
+			'statements'=>0,
+			'structures'=>[]
+		];
+		if($structure['isElse'])
+			$this->stream->next();
+		else
+			$this->skipParenthesizedExpression();
+		$this->stream->skipNoise();
+		if($this->stream->current()!=='{')
+			return \false;
+		$braces=0;
+		$structure['offsetLeftBrace']=$this->stream->key();
+		while($this->stream->valid())
+		{
+			$token=$this->stream->current();
+			if($token===';')
+				++$structure['statements'];
+			elseif($token==='{')
+				++$braces;
+			elseif($token==='}')
+			{
+				--$braces;
+				if(!$braces)
+					break;
+			}
+			elseif($this->isControlStructure())
+			{
+				if(!$this->stream->isAny([\T_ELSE,\T_ELSEIF]))
+					++$structure['statements'];
+				$innerStructure=$this->parseControlStructure();
+				if($innerStructure)
+					$structure['structures'][]=$innerStructure;
+			}
+			$this->stream->next();
+		}
+		$structure['offsetRightBrace']=$this->stream->key();
+		return$structure;
+	}
+	protected function markPreservedBraces($offset)
+	{
+		$braces=0;
+		$braceOffset=$offset;
+		$isFollowedByElse=\false;
+		$this->stream->seek($offset);
+		while($this->stream->valid()&&$this->stream->current()==='}')
+		{
+			++$braces;
+			$braceOffset=$this->stream->key();
+			$this->stream->next();
+			$this->stream->skipNoise();
+			if($this->stream->valid())
+				$isFollowedByElse=$this->stream->isAny([\T_ELSE,\T_ELSEIF]);
+		}
+		if($isFollowedByElse&&$braces>1)
+			$this->preservedBraces[$braceOffset]=1;
+	}
+	protected function removeBraces(array$structure)
+	{
+		$this->stream->seek($structure['offsetLeftBrace']);
+		if(!$structure['statements'])
+			$this->stream->replace(';');
+		elseif($this->stream->canRemoveCurrentToken())
+			$this->stream->remove();
+		else
+			$this->stream->replace([\T_WHITESPACE,' ']);
+		$this->stream->seek($structure['offsetRightBrace']);
+		$this->stream->remove();
+		$this->removeWhitespaceBefore($structure['offsetLeftBrace']);
+		$this->removeWhitespaceBefore($structure['offsetRightBrace']);
+	}
+	protected function removeWhitespaceBefore($offset)
+	{
+		if(!isset($this->stream[$offset-1]))
+			return;
+		$this->stream->seek($offset-1);
+		if($this->stream->is(\T_WHITESPACE)&&$this->stream->canRemoveCurrentToken())
+			$this->stream->remove();
+	}
+	protected function skipParenthesizedExpression()
+	{
+		$this->stream->skipToToken('(');
+		$parens=0;
+		$this->stream->next();
+		while($this->stream->valid())
+		{
+			$token=$this->stream->current();
+			if($token===')')
+				if($parens)
+					--$parens;
+				else
+				{
+					$this->stream->next();
+					break;
+				}
+			elseif($token==='(')
+				++$parens;
+			$this->stream->next();
+		}
+	}
+	protected function unindentBlock($start,$end)
+	{
+		$this->stream->seek($start);
+		$anchor="\n";
+		while($this->stream->key()<=$end)
+		{
+			$token=$this->stream->current();
+			if($this->stream->isNoise())
+			{
+				$token[1]=\preg_replace('(('.$anchor.")(?:    |\t))",'$1',$token[1]);
+				$this->stream->replace($token);
+			}
+			$anchor=($token[0]===\T_COMMENT)?"^|\n":"\n";
+			$this->stream->next();
+		}
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class RemoveComments extends Pass
+{
+	public$excludeRegexp=[
+		'(@license)'
+	];
+	public$removeDocBlocks=\true;
+	public$removeMultiLineComments=\true;
+	public$removeSingleLineComments=\true;
+	public function optimize(TokenStream$stream)
+	{
+		if($this->removeDocBlocks)
+			$this->removeDocBlocksFrom($stream);
+		if($this->removeMultiLineComments||$this->removeSingleLineComments)
+			$this->removeCommentsFrom($stream);
+	}
+	protected function removeDocBlocksFrom(TokenStream$stream)
+	{
+		$stream->reset();
+		while($stream->skipTo(\T_DOC_COMMENT))
+		{
+			if($this->isExcluded($stream->currentText()))
+				continue;
+			$this->removeComment($stream);
+		}
+	}
+	protected function removeComment(TokenStream$stream)
+	{
+		$prevToken=$stream->lookbehind();
+		$nextToken=$stream->lookahead();
+		$isPrecededByWhitespace=(\is_array($prevToken)&&$prevToken[0]===\T_WHITESPACE);
+		$isFollowedByWhitespace=(\is_array($nextToken)&&$nextToken[0]===\T_WHITESPACE);
+		if(!$isPrecededByWhitespace&&!$isFollowedByWhitespace)
+			$stream->replace([\T_WHITESPACE,' ']);
+		else
+			$stream->remove();
+		$stream->next();
+		if($isPrecededByWhitespace&&$isFollowedByWhitespace)
+			$stream->remove();
+	}
+	protected function removeCommentsFrom(TokenStream$stream)
+	{
+		$stream->reset();
+		while($stream->skipTo(\T_COMMENT))
+		{
+			$comment=$stream->currentText();
+			if($comment[1]==='/'&&!$this->removeSingleLineComments)
+				continue;
+			if($comment[1]==='*'&&!$this->removeMultiLineComments)
+				continue;
+			if($this->isExcluded($stream->currentText()))
+				continue;
+			$this->removeComment($stream);
+		}
+	}
+	protected function isExcluded($comment)
+	{
+		foreach($this->excludeRegexp as$regexp)
+			if(\preg_match($regexp,$comment))
+				return \true;
+		return \false;
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class RemoveWhitespace extends Pass
+{
+	public$removeBlankLines=\true;
+	public$removeIndentation=\false;
+	public$removeSameLineWhitespace=\true;
+	public function optimize(TokenStream$stream)
+	{
+		$regexp=$this->getRegexp();
+		while($stream->skipTo(\T_WHITESPACE))
+		{
+			$ws=$stream->currentText();
+			if($this->removeSameLineWhitespace&&\strpos($ws,"\n")===\false&&$stream->canRemoveCurrentToken())
+			{
+				$stream->remove();
+				continue;
+			}
+			$stream->replace([\T_WHITESPACE,\preg_replace($regexp,"\n",$ws)]);
+		}
+	}
+	protected function getRegexp()
+	{
+		if($this->removeBlankLines)
+			return($this->removeIndentation)?'(\\n\\s+)':'(\\n\\s*\\n)';
+		if($this->removeIndentation)
+			return'(\\n[ \\t]+)';
+		return'((?!))';
+	}
+}

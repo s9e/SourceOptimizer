@@ -11,4 +11,7 @@ then
 	then
 		exit 1;
 	fi
+
+	./scripts/build.php
+	git update-index --add bin/source-optimizer
 fi

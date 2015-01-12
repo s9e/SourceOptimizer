@@ -347,15 +347,21 @@ class OptimizeControlStructures extends Pass
 	protected function unindentBlock($start, $end)
 	{
 		$this->stream->seek($start);
+		$lastToken = [null];
 		while ($this->stream->key() <= $end)
 		{
+			$token = $this->stream->current();
 			if ($this->stream->isNoise())
 			{
-				$token = $this->stream->current();
-				$token[1] = preg_replace("/^(?:    |\t)/m", '', $token[1]);
+				$token[1] = preg_replace("(\n(?:    |\t))", "\n", $token[1]);
+				if ($lastToken[0] === T_COMMENT && substr($lastToken[1], -1) === "\n")
+				{
+					$token[1] = preg_replace("(^(?:    |\t))", '', $token[1]);
+				}
 				$this->stream->replace($token);
 			}
 			$this->stream->next();
+			$lastToken = $token;
 		}
 	}
 }

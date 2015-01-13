@@ -86,6 +86,24 @@ class OptimizeControlStructures extends Pass
 	}
 
 	/**
+	* Test whether current token is followed by a function or class-related declaration
+	*
+	* @return bool
+	*/
+	protected function isFollowedByDeclaraction()
+	{
+		$keywords = [T_ABSTRACT, T_CLASS, T_FINAL, T_FUNCTION, T_INTERFACE, T_TRAIT];
+
+		$offset = $this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByFunction = ($this->stream->valid() && $this->stream->isAny($keywords));
+		$this->stream->seek($offset);
+
+		return $isFollowedByFunction;
+	}
+
+	/**
 	* Optimize given T_ELSE structure
 	*
 	* @param  array $structure
@@ -174,7 +192,7 @@ class OptimizeControlStructures extends Pass
 		}
 		$this->stream->skipNoise();
 
-		if ($this->stream->current() !== '{')
+		if ($this->stream->current() !== '{' || $this->isFollowedByDeclaraction())
 		{
 			return false;
 		}

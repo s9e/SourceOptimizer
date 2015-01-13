@@ -469,6 +469,16 @@ class OptimizeControlStructures extends Pass
 	{
 		return($this->stream->current()==='{'||$this->stream->isAny([\T_CURLY_OPEN,\T_DOLLAR_OPEN_CURLY_BRACES]));
 	}
+	protected function isFollowedByDeclaraction()
+	{
+		$keywords=[\T_ABSTRACT,\T_CLASS,\T_FINAL,\T_FUNCTION,\T_INTERFACE,\T_TRAIT];
+		$offset=$this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByFunction=($this->stream->valid()&&$this->stream->isAny($keywords));
+		$this->stream->seek($offset);
+		return$isFollowedByFunction;
+	}
 	protected function optimizeElse(array$structure)
 	{
 		$this->stream->seek($structure['offsetLeftBrace']);
@@ -516,7 +526,7 @@ class OptimizeControlStructures extends Pass
 		else
 			$this->skipParenthesizedExpression();
 		$this->stream->skipNoise();
-		if($this->stream->current()!=='{')
+		if($this->stream->current()!=='{'||$this->isFollowedByDeclaraction())
 			return \false;
 		$braces=0;
 		$structure['offsetLeftBrace']=$this->stream->key();

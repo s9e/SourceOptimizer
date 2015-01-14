@@ -13,11 +13,10 @@ use s9e\SourceOptimizer\TokenStream;
 class RemoveComments extends Pass
 {
 	/**
-	* @var string[] List of regexps used to exclude comments from minification
+	* @var string[] List of annotations to preserve
 	*/
-	public $excludeRegexp = [
-		// Do not remove comments with a license annotation
-		'(@license)'
+	public $preserveAnnotations = [
+		'license'
 	];
 
 	/**
@@ -36,51 +35,71 @@ class RemoveComments extends Pass
 	public $removeSingleLineComments = true;
 
 	/**
+	* @var TokenStream Token stream of the source being processed
+	*/
+	protected $stream;
+
+	/**
 	* {@inheritdoc}
 	*/
 	public function optimize(TokenStream $stream)
 	{
+		$this->stream = $stream;
 		if ($this->removeDocBlocks)
 		{
-			$this->removeDocBlocksFrom($stream);
+			$this->removeDocBlocks();
 		}
-
 		if ($this->removeMultiLineComments || $this->removeSingleLineComments)
 		{
-			$this->removeCommentsFrom($stream);
+			$this->removeComments();
 		}
+	}
+
+	/**
+	* Generate a regexp that matches preserved annotations
+	*
+	* @return string
+	*/
+	protected function getRegexp()
+	{
+		if (empty($this->preserveAnnotations))
+		{
+			return '((?!))';
+		}
+
+		return '(@(?:' . implode('|', $this->preserveAnnotations) . '))';
 	}
 
 	/**
 	* Remove all docblocks tokens from given stream
 	*
-	* @param  TokenStream $stream
 	* @return void
 	*/
-	protected function removeDocBlocksFrom(TokenStream $stream)
+	protected function removeDocBlocks()
 	{
-		$stream->reset();
-		while ($stream->skipTo(T_DOC_COMMENT))
+		$regexp = $this->getRegexp();
+		$this->stream->reset();
+		while ($this->stream->skipTo(T_DOC_COMMENT))
 		{
-			if ($this->isExcluded($stream->currentText()))
+			$docblock = $this->stream->currentText();
+			if (strpos($docblock, '@') !== false && preg_match($regexp, $docblock))
 			{
 				continue;
 			}
 
-			$this->removeComment($stream);
+			$this->removeComment();
 		}
 	}
 
 	/**
 	* Remove current comment token from given stream
 	*
-	* @param  TokenStream $stream
 	* @return void
 	*/
-	protected function removeComment(TokenStream $stream)
+	protected function removeComment()
 	{
-		$prevToken = $stream->lookbehind();
-		$nextToken = $stream->lookahead();
+		$prevToken = $this->stream->lookbehind();
+		$nextToken = $this->stream->lookahead();
 
 		$isPrecededByWhitespace = (is_array($prevToken) && $prevToken[0] === T_WHITESPACE);
 		$isFollowedByWhitespace = (is_array($nextToken) && $nextToken[0] === T_WHITESPACE);
@@ -88,33 +107,32 @@ class RemoveComments extends Pass
 		// Replace this comment with whitespace if it's not preceeded or followed by whitespace
 		if (!$isPrecededByWhitespace && !$isFollowedByWhitespace)
 		{
-			$stream->replace([T_WHITESPACE, ' ']);
+			$this->stream->replace([T_WHITESPACE, ' ']);
 		}
 		else
 		{
-			$stream->remove();
+			$this->stream->remove();
 		}
-		$stream->next();
+		$this->stream->next();
 
 		// If the comment is surrounded by whitespace, we remove the latter
 		if ($isPrecededByWhitespace && $isFollowedByWhitespace)
 		{
-			$stream->remove();
+			$this->stream->remove();
 		}
 	}
 
 	/**
 	* Remove single-line and/or multi-line comments from given stream
 	*
-	* @param  TokenStream $stream
 	* @return void
 	*/
-	protected function removeCommentsFrom(TokenStream $stream)
+	protected function removeComments()
 	{
-		$stream->reset();
-		while ($stream->skipTo(T_COMMENT))
+		$this->stream->reset();
+		while ($this->stream->skipTo(T_COMMENT))
 		{
-			$comment = $stream->currentText();
+			$comment = $this->stream->currentText();
 			if ($comment[1] === '/' && !$this->removeSingleLineComments)
 			{
 				continue;
@@ -123,31 +141,8 @@ class RemoveComments extends Pass
 			{
 				continue;
 			}
-			if ($this->isExcluded($stream->currentText()))
-			{
-				continue;
-			}
 
-			$this->removeComment($stream);
+			$this->removeComment();
 		}
-	}
-
-	/**
-	* Test whether given comment should be excluded from minification
-	*
-	* @param  string $comment Original comment
-	* @return bool
-	*/
-	protected function isExcluded($comment)
-	{
-		foreach ($this->excludeRegexp as $regexp)
-		{
-			if (preg_match($regexp, $comment))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

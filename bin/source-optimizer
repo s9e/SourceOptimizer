@@ -645,64 +645,65 @@ use s9e\SourceOptimizer\Pass;
 use s9e\SourceOptimizer\TokenStream;
 class RemoveComments extends Pass
 {
-	public$excludeRegexp=[
-		'(@license)'
+	public$preserveAnnotations=[
+		'license'
 	];
 	public$removeDocBlocks=\true;
 	public$removeMultiLineComments=\true;
 	public$removeSingleLineComments=\true;
+	protected$stream;
 	public function optimize(TokenStream$stream)
 	{
+		$this->stream=$stream;
 		if($this->removeDocBlocks)
-			$this->removeDocBlocksFrom($stream);
+			$this->removeDocBlocks();
 		if($this->removeMultiLineComments||$this->removeSingleLineComments)
-			$this->removeCommentsFrom($stream);
+			$this->removeComments();
 	}
-	protected function removeDocBlocksFrom(TokenStream$stream)
+	protected function getRegexp()
 	{
-		$stream->reset();
-		while($stream->skipTo(\T_DOC_COMMENT))
+		if(empty($this->preserveAnnotations))
+			return'((?!))';
+		return'(@(?:'.\implode('|',$this->preserveAnnotations).'))';
+	}
+	protected function removeDocBlocks()
+	{
+		$regexp=$this->getRegexp();
+		$this->stream->reset();
+		while($this->stream->skipTo(\T_DOC_COMMENT))
 		{
-			if($this->isExcluded($stream->currentText()))
+			$docblock=$this->stream->currentText();
+			if(\strpos($docblock,'@')!==\false&&\preg_match($regexp,$docblock))
 				continue;
-			$this->removeComment($stream);
+			$this->removeComment();
 		}
 	}
-	protected function removeComment(TokenStream$stream)
+	protected function removeComment()
 	{
-		$prevToken=$stream->lookbehind();
-		$nextToken=$stream->lookahead();
+		$prevToken=$this->stream->lookbehind();
+		$nextToken=$this->stream->lookahead();
 		$isPrecededByWhitespace=(\is_array($prevToken)&&$prevToken[0]===\T_WHITESPACE);
 		$isFollowedByWhitespace=(\is_array($nextToken)&&$nextToken[0]===\T_WHITESPACE);
 		if(!$isPrecededByWhitespace&&!$isFollowedByWhitespace)
-			$stream->replace([\T_WHITESPACE,' ']);
+			$this->stream->replace([\T_WHITESPACE,' ']);
 		else
-			$stream->remove();
-		$stream->next();
+			$this->stream->remove();
+		$this->stream->next();
 		if($isPrecededByWhitespace&&$isFollowedByWhitespace)
-			$stream->remove();
+			$this->stream->remove();
 	}
-	protected function removeCommentsFrom(TokenStream$stream)
+	protected function removeComments()
 	{
-		$stream->reset();
-		while($stream->skipTo(\T_COMMENT))
+		$this->stream->reset();
+		while($this->stream->skipTo(\T_COMMENT))
 		{
-			$comment=$stream->currentText();
+			$comment=$this->stream->currentText();
 			if($comment[1]==='/'&&!$this->removeSingleLineComments)
 				continue;
 			if($comment[1]==='*'&&!$this->removeMultiLineComments)
 				continue;
-			if($this->isExcluded($stream->currentText()))
-				continue;
-			$this->removeComment($stream);
+			$this->removeComment();
 		}
-	}
-	protected function isExcluded($comment)
-	{
-		foreach($this->excludeRegexp as$regexp)
-			if(\preg_match($regexp,$comment))
-				return \true;
-		return \false;
 	}
 }
 /**

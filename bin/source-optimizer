@@ -387,64 +387,67 @@ class EnforceFQN extends Pass
 			function($namespace,$startOffset,$endOffset)
 			{
 				if($namespace!=='')
-				{
-					$this->optimizeConstants($startOffset,$endOffset);
-					$this->optimizeFunctionCalls($startOffset,$endOffset);
-				}
+					$this->optimizeBlock($startOffset,$endOffset);
 			}
 		);
 	}
-	protected function isPrecededBy($offset,array$tokenValues)
+	protected function isFollowedByOperator()
 	{
+		$offset=$this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByOperator=($this->stream->valid()&&$this->stream->isAny([\T_NS_SEPARATOR,\T_PAAMAYIM_NEKUDOTAYIM]));
+		$this->stream->seek($offset);
+		return$isFollowedByOperator;
+	}
+	protected function isFollowedByParenthesis()
+	{
+		$offset=$this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByParenthesis=($this->stream->valid()&&$this->stream->current()==='(');
+		$this->stream->seek($offset);
+		return$isFollowedByParenthesis;
+	}
+	protected function isPrecededByKeyword()
+	{
+		$offset=$this->stream->key();
 		while(--$offset>0)
 		{
 			$tokenValue=$this->stream[$offset][0];
-			if(\in_array($tokenValue,$tokenValues,\true))
+			if(\in_array($tokenValue,[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE],\true))
 				return \true;
 			if(!\in_array($tokenValue,[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true))
 				break;
 		}
 		return \false;
 	}
-	protected function optimizeConstants($startOffset,$endOffset)
+	protected function optimizeBlock($startOffset,$endOffset)
 	{
 		$this->stream->seek($startOffset);
 		while($this->stream->skipTo(\T_STRING)&&$this->stream->key()<=$endOffset)
-			$this->processConstant();
-	}
-	protected function optimizeFunctionCalls($startOffset,$endOffset)
-	{
-		$this->stream->seek($startOffset);
-		while($this->stream->skipToToken('(')&&$this->stream->key()<=$endOffset)
-			$this->processFunctionCall();
+		{
+			if($this->isPrecededByKeyword()||$this->isFollowedByOperator())
+				continue;
+			if($this->isFollowedByParenthesis())
+				$this->processFunctionCall();
+			else
+				$this->processConstant();
+		}
 	}
 	protected function processConstant()
 	{
 		$constName=$this->stream->currentText();
 		if(!isset($this->constants[$constName])&&!\preg_match('(^(?:false|null|true)$)Di',$constName))
 			return;
-		$offset=$this->stream->key();
-		if($this->isPrecededBy($offset,[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE]))
-			return;
-		$this->stream->next();
-		$this->stream->skipNoise();
-		if($this->stream->valid())
-			if($this->stream->isAny([\T_NS_SEPARATOR,\T_PAAMAYIM_NEKUDOTAYIM])||$this->stream->current()==='(')
-				return;
-		$this->stream->seek($offset);
 		$this->stream->replace([\T_STRING,'\\'.$constName]);
 	}
 	protected function processFunctionCall()
 	{
-		$funcOffset=$this->stream->key()-1;
-		if($this->stream[$funcOffset][0]!==\T_STRING)
-			return;
-		$funcName=$this->stream[$funcOffset][1];
+		$funcName=$this->stream->currentText();
 		if(!isset($this->functions[$funcName]))
 			return;
-		if($this->isPrecededBy($funcOffset,[\T_FUNCTION,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM]))
-			return;
-		$this->stream[$funcOffset]=[\T_STRING,'\\'.$funcName];
+		$this->stream->replace([\T_STRING,'\\'.$funcName]);
 	}
 }
 /**

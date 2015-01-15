@@ -51,26 +51,56 @@ class EnforceFQN extends Pass
 			{
 				if ($namespace !== '')
 				{
-					$this->optimizeConstants($startOffset, $endOffset);
-					$this->optimizeFunctionCalls($startOffset, $endOffset);
+					$this->optimizeBlock($startOffset, $endOffset);
 				}
 			}
 		);
 	}
 
 	/**
-	* Test whether the token at given offset is preceded by any token of given values
+	* Test whether current token is followed by an object operator or a namespace separator
 	*
-	* @param  integer   $offset
-	* @param  integer[] $tokenValues
 	* @return bool
 	*/
-	protected function isPrecededBy($offset, array $tokenValues)
+	protected function isFollowedByOperator()
 	{
+		$offset = $this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByOperator = ($this->stream->valid() && $this->stream->isAny([T_NS_SEPARATOR, T_PAAMAYIM_NEKUDOTAYIM]));
+		$this->stream->seek($offset);
+
+		return $isFollowedByOperator;
+	}
+
+	/**
+	* Test whether current token is followed by a parenthesis
+	*
+	* @return bool
+	*/
+	protected function isFollowedByParenthesis()
+	{
+		$offset = $this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByParenthesis = ($this->stream->valid() && $this->stream->current() === '(');
+		$this->stream->seek($offset);
+
+		return $isFollowedByParenthesis;
+	}
+
+	/**
+	* Test whether the token at given offset is preceded by a keyword
+	*
+	* @return bool
+	*/
+	protected function isPrecededByKeyword()
+	{
+		$offset = $this->stream->key();
 		while (--$offset > 0)
 		{
 			$tokenValue = $this->stream[$offset][0];
-			if (in_array($tokenValue, $tokenValues, true))
+			if (in_array($tokenValue, [T_CLASS, T_CONST, T_FUNCTION, T_INTERFACE, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM, T_TRAIT, T_USE], true))
 			{
 				return true;
 			}
@@ -86,34 +116,29 @@ class EnforceFQN extends Pass
 	}
 
 	/**
-	* Optimize all constants in given range
+	* Optimize all constants and function calls in given range
 	*
 	* @param  integer $startOffset
 	* @param  integer $endOffset
 	* @return void
 	*/
-	protected function optimizeConstants($startOffset, $endOffset)
+	protected function optimizeBlock($startOffset, $endOffset)
 	{
 		$this->stream->seek($startOffset);
 		while ($this->stream->skipTo(T_STRING) && $this->stream->key() <= $endOffset)
 		{
-			$this->processConstant();
-		}
-	}
-
-	/**
-	* Optimize all function calls in given range
-	*
-	* @param  integer $startOffset
-	* @param  integer $endOffset
-	* @return void
-	*/
-	protected function optimizeFunctionCalls($startOffset, $endOffset)
-	{
-		$this->stream->seek($startOffset);
-		while ($this->stream->skipToToken('(') && $this->stream->key() <= $endOffset)
-		{
-			$this->processFunctionCall();
+			if ($this->isPrecededByKeyword() || $this->isFollowedByOperator())
+			{
+				continue;
+			}
+			if ($this->isFollowedByParenthesis())
+			{
+				$this->processFunctionCall();
+			}
+			else
+			{
+				$this->processConstant();
+			}
 		}
 	}
 
@@ -130,53 +155,22 @@ class EnforceFQN extends Pass
 			return;
 		}
 
-		// Ignore if preceded by a keyword, "\", "->" or "::"
-		$offset = $this->stream->key();
-		if ($this->isPrecededBy($offset, [T_CLASS, T_CONST, T_FUNCTION, T_INTERFACE, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM, T_TRAIT, T_USE]))
-		{
-			return;
-		}
-
-		// Ignore if followed by "\", "::" or "("
-		$this->stream->next();
-		$this->stream->skipNoise();
-		if ($this->stream->valid())
-		{
-			if ($this->stream->isAny([T_NS_SEPARATOR, T_PAAMAYIM_NEKUDOTAYIM]) || $this->stream->current() === '(')
-			{
-				return;
-			}
-		}
-
-		$this->stream->seek($offset);
 		$this->stream->replace([T_STRING, '\\' . $constName]);
 	}
 
 	/**
-	* Process the function call whose opening parenthesis start at current offset
+	* Process the function name at current offset
 	*
 	* @return void
 	*/
 	protected function processFunctionCall()
 	{
-		$funcOffset = $this->stream->key() - 1;
-		if ($this->stream[$funcOffset][0] !== T_STRING)
-		{
-			return;
-		}
-
-		$funcName = $this->stream[$funcOffset][1];
+		$funcName = $this->stream->currentText();
 		if (!isset($this->functions[$funcName]))
 		{
 			return;
 		}
 
-		// Ignore if preceded by "function", "new", "\", "->" or "::"
-		if ($this->isPrecededBy($funcOffset, [T_FUNCTION, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM]))
-		{
-			return;
-		}
-
-		$this->stream[$funcOffset] = [T_STRING, '\\' . $funcName];
+		$this->stream->replace([T_STRING, '\\' . $funcName]);
 	}
 }

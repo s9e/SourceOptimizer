@@ -10,10 +10,25 @@ namespace s9e\SourceOptimizer;
 abstract class ContextHelper
 {
 	/**
+	* Execute given callback on each namespace block in given stream
+	*
+	* @param  TokenStream $stream   Token stream
+	* @param  callable    $callback Callback
+	* @return void
+	*/
+	public static function forEachNamespace(TokenStream $stream, callable $callback)
+	{
+		foreach (self::getNamespaces($stream) as $block)
+		{
+			call_user_func_array($callback, $block);
+		}
+	}
+
+	/**
 	* Get the list of namespaces in given stream
 	*
 	* @param  TokenStream $stream Token stream
-	* @return array               Offset as key, namespace as value
+	* @return array[]             List of arrays with namespace, start offset, end offset
 	*/
 	public static function getNamespaces(TokenStream $stream)
 	{
@@ -39,6 +54,17 @@ abstract class ContextHelper
 			$namespaces[$offset] = $namespace;
 		}
 
-		return $namespaces;
+		$blocks = [];
+		foreach ($namespaces as $offset => $namespace)
+		{
+			if ($blocks)
+			{
+				$blocks[count($blocks) - 1][2] = $offset - 1;
+			}
+			$blocks[] = [$namespace, $offset];
+		}
+		$blocks[count($blocks) - 1][2] = $stream->key() - 1;
+
+		return $blocks;
 	}
 }

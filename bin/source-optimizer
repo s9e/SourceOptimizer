@@ -47,6 +47,11 @@ class CommandLineRunner
 namespace s9e\SourceOptimizer;
 abstract class ContextHelper
 {
+	public static function forEachNamespace(TokenStream$stream,callable$callback)
+	{
+		foreach(self::getNamespaces($stream)as$block)
+			\call_user_func_array($callback,$block);
+	}
 	public static function getNamespaces(TokenStream$stream)
 	{
 		$namespaces=[''];
@@ -68,7 +73,15 @@ abstract class ContextHelper
 			}
 			$namespaces[$offset]=$namespace;
 		}
-		return$namespaces;
+		$blocks=[];
+		foreach($namespaces as$offset=>$namespace)
+		{
+			if($blocks)
+				$blocks[\count($blocks)-1][2]=$offset-1;
+			$blocks[]=[$namespace,$offset];
+		}
+		$blocks[\count($blocks)-1][2]=$stream->key()-1;
+		return$blocks;
 	}
 }
 /**
@@ -369,19 +382,17 @@ class EnforceFQN extends Pass
 	public function optimize(TokenStream$stream)
 	{
 		$this->stream=$stream;
-		$namespaces=ContextHelper::getNamespaces($this->stream);
-		$namespaces[\PHP_INT_MAX]='_';
-		foreach($namespaces as$offset=>$namespace)
-		{
-			if(isset($startOffset))
+		ContextHelper::forEachNamespace(
+			$this->stream,
+			function($namespace,$startOffset,$endOffset)
 			{
-				$this->optimizeConstants($startOffset,$offset-1);
-				$this->optimizeFunctionCalls($startOffset,$offset-1);
-				unset($startOffset);
+				if($namespace!=='')
+				{
+					$this->optimizeConstants($startOffset,$endOffset);
+					$this->optimizeFunctionCalls($startOffset,$endOffset);
+				}
 			}
-			if($namespace!=='')
-				$startOffset=$offset;
-		}
+		);
 	}
 	protected function isPrecededBy($offset,array$tokenValues)
 	{

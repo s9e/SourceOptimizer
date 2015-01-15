@@ -14,7 +14,7 @@ class ContextHelperTest extends PHPUnit_Framework_TestCase
 	public function testGetNamespaces($php, $expected)
 	{
 		$tokenStream = new TokenStream($php);
-		$this->assertSame($expected, ContextHelper::getNamespaces($tokenStream));
+		$this->assertEquals($expected, ContextHelper::getNamespaces($tokenStream));
 	}
 
 	public function getGetNamespacesTests()
@@ -22,19 +22,30 @@ class ContextHelperTest extends PHPUnit_Framework_TestCase
 		return [
 			[
 				'<?php $a=1;',
-				['']
+				[['', 0, 4]]
 			],
 			[
 				'<?php namespace foo; $a=2; namespace bar\\baz; $b=3;',
-				['', 1 => 'foo', 11 => 'bar\\baz']
+				[
+					['', 0, 0],
+					['foo', 1, 10],
+					['bar\\baz', 11, 21]
+				]
 			],
 			[
 				'<?php namespace foo {} namespace bar\\baz {}',
-				['', 1 => 'foo', 8 => 'bar\\baz']
+				[
+					['', 0, 0],
+					['foo', 1, 7],
+					['bar\\baz', 8, 15]
+				]
 			],
 			[
-				'<?php namespace foo \ /***/ bar { var_dump(__NAMESPACE__); }',
-				['', 1 => 'foo\\bar']
+				'<?php namespace foo \\ /***/ bar { var_dump(__NAMESPACE__); }',
+				[
+					['', 0, 0],
+					['foo\\bar', 1, 19]
+				]
 			],
 		];
 	}

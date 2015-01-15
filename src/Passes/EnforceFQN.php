@@ -45,23 +45,17 @@ class EnforceFQN extends Pass
 	public function optimize(TokenStream $stream)
 	{
 		$this->stream = $stream;
-
-		// Collect the namespaces and add an entry that serves as an upper bound
-		$namespaces = ContextHelper::getNamespaces($this->stream);
-		$namespaces[PHP_INT_MAX] = '_';
-		foreach ($namespaces as $offset => $namespace)
-		{
-			if (isset($startOffset))
+		ContextHelper::forEachNamespace(
+			$this->stream,
+			function ($namespace, $startOffset, $endOffset)
 			{
-				$this->optimizeConstants($startOffset, $offset - 1);
-				$this->optimizeFunctionCalls($startOffset, $offset - 1);
-				unset($startOffset);
+				if ($namespace !== '')
+				{
+					$this->optimizeConstants($startOffset, $endOffset);
+					$this->optimizeFunctionCalls($startOffset, $endOffset);
+				}
 			}
-			if ($namespace !== '')
-			{
-				$startOffset = $offset;
-			}
-		}
+		);
 	}
 
 	/**

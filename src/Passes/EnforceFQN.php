@@ -137,11 +137,24 @@ class EnforceFQN extends Pass
 		}
 
 		// Ignore if preceded by a keyword, "\", "->" or "::"
-		if ($this->isPrecededBy($this->stream->key(), [T_CLASS, T_CONST, T_FUNCTION, T_INTERFACE, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM, T_TRAIT, T_USE]))
+		$offset = $this->stream->key();
+		if ($this->isPrecededBy($offset, [T_CLASS, T_CONST, T_FUNCTION, T_INTERFACE, T_NEW, T_NS_SEPARATOR, T_OBJECT_OPERATOR, T_PAAMAYIM_NEKUDOTAYIM, T_TRAIT, T_USE]))
 		{
 			return;
 		}
 
+		// Ignore if followed by "\", "::" or "("
+		$this->stream->next();
+		$this->stream->skipNoise();
+		if ($this->stream->valid())
+		{
+			if ($this->stream->isAny([T_NS_SEPARATOR, T_PAAMAYIM_NEKUDOTAYIM]) || $this->stream->current() === '(')
+			{
+				return;
+			}
+		}
+
+		$this->stream->seek($offset);
 		$this->stream->replace([T_STRING, '\\' . $constName]);
 	}
 

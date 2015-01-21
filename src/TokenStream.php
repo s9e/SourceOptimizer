@@ -267,11 +267,31 @@ class TokenStream implements ArrayAccess, Iterator
 	protected function parse($src)
 	{
 		$this->tokens = token_get_all($src);
-		foreach ($this->tokens as &$token)
+		$keys = [];
+		foreach ($this->tokens as $k => &$token)
 		{
 			if (is_array($token))
 			{
 				unset($token[2]);
+
+				// Remove the newline at the end of comments to put it in the next token
+				if ($token[0] === T_COMMENT && $token[1][1] === '/')
+				{
+					$token[1] = rtrim($token[1], "\n");
+					$keys[] = $k + 1;
+				}
+			}
+		}
+
+		foreach (array_reverse($keys) as $k)
+		{
+			if (isset($this->tokens[$k]) && $this->tokens[$k][0] === T_WHITESPACE)
+			{
+				$this->tokens[$k][1] = "\n" . $this->tokens[$k][1];
+			}
+			else
+			{
+				array_splice($this->tokens, $k, 0, [[T_WHITESPACE, "\n"]]);
 			}
 		}
 

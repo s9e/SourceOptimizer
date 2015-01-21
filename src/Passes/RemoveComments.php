@@ -98,27 +98,30 @@ class RemoveComments extends Pass
 	*/
 	protected function removeComment()
 	{
-		$prevToken = $this->stream->lookbehind();
-		$nextToken = $this->stream->lookahead();
-
-		$isPrecededByWhitespace = (is_array($prevToken) && $prevToken[0] === T_WHITESPACE);
-		$isFollowedByWhitespace = (is_array($nextToken) && $nextToken[0] === T_WHITESPACE);
-
-		// Replace this comment with whitespace if it's not preceeded or followed by whitespace
-		if (!$isPrecededByWhitespace && !$isFollowedByWhitespace)
+		$offset = $this->stream->key();
+		$this->stream->previous();
+		if ($this->stream->is(T_WHITESPACE))
 		{
-			$this->stream->replace([T_WHITESPACE, ' ']);
+			$ws = preg_replace('(\\n[ \\t]*$)', '', $this->stream->currentText());
+			if ($ws === '')
+			{
+				$this->stream->remove();
+			}
+			else
+			{
+				$this->stream->replace([T_WHITESPACE, $ws]);
+			}
+		}
+
+		$this->stream->seek($offset);
+		if ($this->stream->canRemoveCurrentToken())
+		{
+			$this->stream->remove();
 		}
 		else
 		{
-			$this->stream->remove();
-		}
-		$this->stream->next();
-
-		// If the comment is surrounded by whitespace, we remove the latter
-		if ($isPrecededByWhitespace && $isFollowedByWhitespace)
-		{
-			$this->stream->remove();
+			$ws = (substr($this->stream->currentText(), 1, 1) === '/') ? "\n" : ' ';
+			$this->stream->replace([T_WHITESPACE, $ws]);
 		}
 	}
 

@@ -13,6 +13,7 @@ class CommandLineRunner
 		if(!\class_exists(__NAMESPACE__.'\\Optimizer'))
 			self::preload(__DIR__);
 	}
+
 	public static function run()
 	{
 		self::autoload();
@@ -28,10 +29,12 @@ class CommandLineRunner
 			$optimizer->$methodName($path);
 		}
 	}
+
 	protected static function getTargets()
 	{
 		return \array_slice($_SERVER['argv'],1);
 	}
+
 	protected static function preload($dir)
 	{
 		foreach(\glob($dir.'/[A-Z]*.php')as$path)
@@ -52,6 +55,7 @@ abstract class ContextHelper
 		foreach(self::getNamespaces($stream)as$block)
 			\call_user_func_array($callback,$block);
 	}
+
 	public static function getNamespaces(TokenStream$stream)
 	{
 		$namespaces=[''];
@@ -93,6 +97,7 @@ namespace s9e\SourceOptimizer;
 class Optimizer
 {
 	protected$passes=[];
+
 	public function __construct()
 	{
 		$this->enable('RemoveComments');
@@ -100,14 +105,17 @@ class Optimizer
 		$this->enable('EnforceFQN');
 		$this->enable('OptimizeControlStructures');
 	}
+
 	public function disable($passName)
 	{
 		unset($this->passes[$passName]);
 	}
+
 	public function disableAll()
 	{
 		$this->passes=[];
 	}
+
 	public function enable($passName,array$options=[])
 	{
 		$className=__NAMESPACE__.'\\Passes\\'.$passName;
@@ -120,6 +128,7 @@ class Optimizer
 		foreach($options as$optionName=>$optionValue)
 			$this->passes[$passName]->$optionName=$optionValue;
 	}
+
 	public function optimize($php)
 	{
 		$stream=new TokenStream($php);
@@ -130,11 +139,13 @@ class Optimizer
 		}
 		return$stream->serialize();
 	}
+
 	public function optimizeDir($path)
 	{
 		\array_map([$this,'optimizeFile'],\glob($path.'/*.php'));
 		\array_map([$this,'optimizeDir'],\glob($path.'/*',\GLOB_ONLYDIR));
 	}
+
 	public function optimizeFile($filepath)
 	{
 		$old=\file_get_contents($filepath);
@@ -164,20 +175,27 @@ use Iterator;
 class TokenStream implements ArrayAccess,Iterator
 {
 	protected$cnt;
+
 	protected$excludeExact=[
 		'- -',
 		'+ +',
 		'- --',
 		'+ ++'
 	];
+
 	public$needsReparsing;
+
 	protected$offset;
+
 	protected$sparse;
+
 	protected$tokens;
+
 	public function __construct($src)
 	{
 		$this->parse($src);
 	}
+
 	public function canRemoveCurrentToken()
 	{
 		$prevToken=$this->lookbehind();
@@ -200,47 +218,58 @@ class TokenStream implements ArrayAccess,Iterator
 		$nextChar=$nextToken[0];
 		return(\strpos($delimiters,$prevChar)!==\false||\strpos($delimiters,$nextChar)!==\false);
 	}
+
 	public function is($tokenValue)
 	{
 		return($this->tokens[$this->offset][0]===$tokenValue);
 	}
+
 	public function isAny(array$tokenValues)
 	{
 		return \in_array($this->tokens[$this->offset][0],$tokenValues,\true);
 	}
+
 	public function offsetExists($offset)
 	{
 		return isset($this->tokens[$offset]);
 	}
+
 	public function offsetGet($offset)
 	{
 		return$this->tokens[$offset];
 	}
+
 	public function offsetSet($offset,$token)
 	{
 		$this->tokens[$offset]=$token;
 	}
+
 	public function offsetUnset($offset)
 	{
 		unset($this->tokens[$offset]);
 		$this->sparse=\true;
 	}
+
 	public function current()
 	{
 		return$this->tokens[$this->offset];
 	}
+
 	public function currentText()
 	{
 		return(\is_array($this->tokens[$this->offset]))?$this->tokens[$this->offset][1]:$this->tokens[$this->offset];
 	}
+
 	public function isNoise()
 	{
 		return \in_array($this->tokens[$this->offset][0],[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true);
 	}
+
 	public function key()
 	{
 		return$this->offset;
 	}
+
 	public function lookahead()
 	{
 		$i=$this->offset;
@@ -249,6 +278,7 @@ class TokenStream implements ArrayAccess,Iterator
 				return$this->tokens[$i];
 		return \false;
 	}
+
 	public function lookbehind()
 	{
 		$i=$this->offset;
@@ -257,21 +287,38 @@ class TokenStream implements ArrayAccess,Iterator
 				return$this->tokens[$i];
 		return \false;
 	}
+
 	public function next()
 	{
 		while(++$this->offset<$this->cnt&&!isset($this->tokens[$this->offset]));
 	}
+
 	protected function parse($src)
 	{
 		$this->tokens=\token_get_all($src);
-		foreach($this->tokens as&$token)
+		$keys=[];
+		foreach($this->tokens as$k=>&$token)
 			if(\is_array($token))
+			{
 				unset($token[2]);
+
+				if($token[0]===\T_COMMENT&&$token[1][1]==='/')
+				{
+					$token[1]=\rtrim($token[1],"\n");
+					$keys[]=$k+1;
+				}
+			}
+		foreach(\array_reverse($keys)as$k)
+			if(isset($this->tokens[$k])&&$this->tokens[$k][0]===\T_WHITESPACE)
+				$this->tokens[$k][1]="\n".$this->tokens[$k][1];
+			else
+				\array_splice($this->tokens,$k,0,[[\T_WHITESPACE,"\n"]]);
 		$this->cnt=\count($this->tokens);
 		$this->offset=0;
 		$this->needsReparsing=\false;
 		$this->sparse=\false;
 	}
+
 	public function previous()
 	{
 		while($this->offset>0)
@@ -281,14 +328,17 @@ class TokenStream implements ArrayAccess,Iterator
 				break;
 		}
 	}
+
 	public function remove()
 	{
 		$this->offsetUnset($this->offset);
 	}
+
 	public function replace($token)
 	{
 		$this->offsetSet($this->offset,$token);
 	}
+
 	public function reset()
 	{
 		$this->offset=0;
@@ -297,14 +347,17 @@ class TokenStream implements ArrayAccess,Iterator
 		elseif($this->sparse)
 			$this->tokens=\array_values($this->tokens);
 	}
+
 	public function rewind()
 	{
 		$this->reset();
 	}
+
 	public function seek($offset)
 	{
 		$this->offset=$offset;
 	}
+
 	public function serialize()
 	{
 		$src='';
@@ -312,6 +365,7 @@ class TokenStream implements ArrayAccess,Iterator
 			$src.=(\is_array($token))?$token[1]:$token;
 		return$src;
 	}
+
 	public function skipNoise()
 	{
 		while($this->valid())
@@ -321,6 +375,7 @@ class TokenStream implements ArrayAccess,Iterator
 			$this->next();
 		}
 	}
+
 	public function skipWhitespace()
 	{
 		while($this->offset<$this->cnt)
@@ -330,6 +385,7 @@ class TokenStream implements ArrayAccess,Iterator
 			++$this->offset;
 		}
 	}
+
 	public function skipTo($tokenValue)
 	{
 		while(++$this->offset<$this->cnt)
@@ -337,6 +393,7 @@ class TokenStream implements ArrayAccess,Iterator
 				return \true;
 		return \false;
 	}
+
 	public function skipToToken($token)
 	{
 		while(++$this->offset<$this->cnt)
@@ -344,6 +401,7 @@ class TokenStream implements ArrayAccess,Iterator
 				return \true;
 		return \false;
 	}
+
 	public function valid()
 	{
 		return($this->offset<$this->cnt);
@@ -372,13 +430,17 @@ use s9e\SourceOptimizer\TokenStream;
 class EnforceFQN extends Pass
 {
 	protected$constants;
+
 	protected$functions;
+
 	protected$stream;
+
 	public function __construct()
 	{
 		$this->constants=\get_defined_constants();
 		$this->functions=\array_flip(\get_defined_functions()['internal']);
 	}
+
 	public function optimize(TokenStream$stream)
 	{
 		$this->stream=$stream;
@@ -391,6 +453,7 @@ class EnforceFQN extends Pass
 			}
 		);
 	}
+
 	protected function isFollowedByOperator()
 	{
 		$offset=$this->stream->key();
@@ -400,6 +463,7 @@ class EnforceFQN extends Pass
 		$this->stream->seek($offset);
 		return$isFollowedByOperator;
 	}
+
 	protected function isFollowedByParenthesis()
 	{
 		$offset=$this->stream->key();
@@ -409,6 +473,7 @@ class EnforceFQN extends Pass
 		$this->stream->seek($offset);
 		return$isFollowedByParenthesis;
 	}
+
 	protected function isPrecededByKeyword()
 	{
 		$offset=$this->stream->key();
@@ -417,11 +482,13 @@ class EnforceFQN extends Pass
 			$tokenValue=$this->stream[$offset][0];
 			if(\in_array($tokenValue,[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE],\true))
 				return \true;
+
 			if(!\in_array($tokenValue,[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true))
 				break;
 		}
 		return \false;
 	}
+
 	protected function optimizeBlock($startOffset,$endOffset)
 	{
 		$this->stream->seek($startOffset);
@@ -435,6 +502,7 @@ class EnforceFQN extends Pass
 				$this->processConstant();
 		}
 	}
+
 	protected function processConstant()
 	{
 		$constName=$this->stream->currentText();
@@ -442,6 +510,7 @@ class EnforceFQN extends Pass
 			return;
 		$this->stream->replace([\T_STRING,'\\'.$constName]);
 	}
+
 	protected function processFunctionCall()
 	{
 		$funcName=$this->stream->currentText();
@@ -461,7 +530,9 @@ use s9e\SourceOptimizer\TokenStream;
 class OptimizeControlStructures extends Pass
 {
 	protected$preservedBraces;
+
 	protected$stream;
+
 	public function optimize(TokenStream$stream)
 	{
 		$this->preservedBraces=[];
@@ -479,18 +550,22 @@ class OptimizeControlStructures extends Pass
 		}
 		$this->optimizeStructures($structures);
 	}
+
 	protected function canRemoveBracesFrom(array$structure)
 	{
 		return($structure['statements']<=1&&!isset($this->preservedBraces[$structure['offsetRightBrace']]));
 	}
+
 	protected function isControlStructure()
 	{
 		return$this->stream->isAny([\T_ELSE,\T_ELSEIF,\T_FOR,\T_FOREACH,\T_IF,\T_WHILE]);
 	}
+
 	protected function isCurlyOpen()
 	{
 		return($this->stream->current()==='{'||$this->stream->isAny([\T_CURLY_OPEN,\T_DOLLAR_OPEN_CURLY_BRACES]));
 	}
+
 	protected function isFollowedByDeclaraction()
 	{
 		$keywords=[\T_ABSTRACT,\T_CLASS,\T_FINAL,\T_FUNCTION,\T_INTERFACE,\T_TRAIT];
@@ -501,6 +576,7 @@ class OptimizeControlStructures extends Pass
 		$this->stream->seek($offset);
 		return$isFollowedByFunction;
 	}
+
 	protected function optimizeElse(array$structure)
 	{
 		$this->stream->seek($structure['offsetLeftBrace']);
@@ -514,6 +590,7 @@ class OptimizeControlStructures extends Pass
 		$this->stream->remove();
 		$this->removeWhitespaceBefore($this->stream->key());
 	}
+
 	protected function optimizeStructure(array$structure)
 	{
 		$this->optimizeStructures($structure['structures']);
@@ -526,11 +603,13 @@ class OptimizeControlStructures extends Pass
 			$this->removeBraces($structure);
 		}
 	}
+
 	protected function optimizeStructures(array$structures)
 	{
 		foreach($structures as$structure)
 			$this->optimizeStructure($structure);
 	}
+
 	protected function parseControlStructure()
 	{
 		$structure=[
@@ -578,6 +657,7 @@ class OptimizeControlStructures extends Pass
 		$structure['offsetRightBrace']=$this->stream->key();
 		return$structure;
 	}
+
 	protected function markPreservedBraces($offset)
 	{
 		$braces=0;
@@ -596,6 +676,7 @@ class OptimizeControlStructures extends Pass
 		if($isFollowedByElse&&$braces>1)
 			$this->preservedBraces[$braceOffset]=1;
 	}
+
 	protected function removeBraces(array$structure)
 	{
 		$this->stream->seek($structure['offsetLeftBrace']);
@@ -605,11 +686,14 @@ class OptimizeControlStructures extends Pass
 			$this->stream->remove();
 		else
 			$this->stream->replace([\T_WHITESPACE,' ']);
+
 		$this->stream->seek($structure['offsetRightBrace']);
 		$this->stream->remove();
+
 		$this->removeWhitespaceBefore($structure['offsetLeftBrace']);
 		$this->removeWhitespaceBefore($structure['offsetRightBrace']);
 	}
+
 	protected function removeWhitespaceBefore($offset)
 	{
 		if(!isset($this->stream[$offset-1]))
@@ -618,9 +702,11 @@ class OptimizeControlStructures extends Pass
 		if($this->stream->is(\T_WHITESPACE)&&$this->stream->canRemoveCurrentToken())
 			$this->stream->remove();
 	}
+
 	protected function skipParenthesizedExpression()
 	{
 		$this->stream->skipToToken('(');
+
 		$parens=0;
 		$this->stream->next();
 		while($this->stream->valid())
@@ -639,6 +725,7 @@ class OptimizeControlStructures extends Pass
 			$this->stream->next();
 		}
 	}
+
 	protected function unindentBlock($start,$end)
 	{
 		$this->stream->seek($start);
@@ -669,10 +756,15 @@ class RemoveComments extends Pass
 	public$preserveAnnotations=[
 		'license'
 	];
+
 	public$removeDocBlocks=\true;
+
 	public$removeMultiLineComments=\true;
+
 	public$removeSingleLineComments=\true;
+
 	protected$stream;
+
 	public function optimize(TokenStream$stream)
 	{
 		$this->stream=$stream;
@@ -681,12 +773,14 @@ class RemoveComments extends Pass
 		if($this->removeMultiLineComments||$this->removeSingleLineComments)
 			$this->removeComments();
 	}
+
 	protected function getRegexp()
 	{
 		if(empty($this->preserveAnnotations))
 			return'((?!))';
 		return'(@(?:'.\implode('|',$this->preserveAnnotations).'))';
 	}
+
 	protected function removeDocBlocks()
 	{
 		$regexp=$this->getRegexp();
@@ -699,20 +793,29 @@ class RemoveComments extends Pass
 			$this->removeComment();
 		}
 	}
+
 	protected function removeComment()
 	{
-		$prevToken=$this->stream->lookbehind();
-		$nextToken=$this->stream->lookahead();
-		$isPrecededByWhitespace=(\is_array($prevToken)&&$prevToken[0]===\T_WHITESPACE);
-		$isFollowedByWhitespace=(\is_array($nextToken)&&$nextToken[0]===\T_WHITESPACE);
-		if(!$isPrecededByWhitespace&&!$isFollowedByWhitespace)
-			$this->stream->replace([\T_WHITESPACE,' ']);
+		$offset=$this->stream->key();
+		$this->stream->previous();
+		if($this->stream->is(\T_WHITESPACE))
+		{
+			$ws=\preg_replace('(\\n[ \\t]*$)','',$this->stream->currentText());
+			if($ws==='')
+				$this->stream->remove();
+			else
+				$this->stream->replace([\T_WHITESPACE,$ws]);
+		}
+		$this->stream->seek($offset);
+		if($this->stream->canRemoveCurrentToken())
+			$this->stream->remove();
 		else
-			$this->stream->remove();
-		$this->stream->next();
-		if($isPrecededByWhitespace&&$isFollowedByWhitespace)
-			$this->stream->remove();
+		{
+			$ws=(\substr($this->stream->currentText(),1,1)==='/')?"\n":' ';
+			$this->stream->replace([\T_WHITESPACE,$ws]);
+		}
 	}
+
 	protected function removeComments()
 	{
 		$this->stream->reset();
@@ -738,8 +841,11 @@ use s9e\SourceOptimizer\TokenStream;
 class RemoveWhitespace extends Pass
 {
 	public$removeBlankLines=\true;
+
 	public$removeIndentation=\false;
+
 	public$removeSameLineWhitespace=\true;
+
 	public function optimize(TokenStream$stream)
 	{
 		$regexp=$this->getRegexp();
@@ -754,6 +860,7 @@ class RemoveWhitespace extends Pass
 			$stream->replace([\T_WHITESPACE,\preg_replace($regexp,"\n",$ws)]);
 		}
 	}
+
 	protected function getRegexp()
 	{
 		if($this->removeBlankLines)

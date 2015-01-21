@@ -120,8 +120,7 @@ class RemoveComments extends Pass
 		}
 		else
 		{
-			$ws = (substr($this->stream->currentText(), 1, 1) === '/') ? "\n" : ' ';
-			$this->stream->replace([T_WHITESPACE, $ws]);
+			$this->stream->replace([T_WHITESPACE, ' ']);
 		}
 	}
 

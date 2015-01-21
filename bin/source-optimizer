@@ -813,10 +813,7 @@ class RemoveComments extends Pass
 		if($this->stream->canRemoveCurrentToken())
 			$this->stream->remove();
 		else
-		{
-			$ws=(\substr($this->stream->currentText(),1,1)==='/')?"\n":' ';
-			$this->stream->replace([\T_WHITESPACE,$ws]);
-		}
+			$this->stream->replace([\T_WHITESPACE,' ']);
 	}
 
 	protected function removeComments()

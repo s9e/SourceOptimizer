@@ -29,7 +29,24 @@ class OptimizerTest extends PHPUnit_Framework_TestCase
 				'<?php
 
 				$foo=42;'
-			]
+			],
+			[
+				'<?php
+
+				/**
+				* ...
+				*/
+				function foo() {}
+
+				/**
+				* ...
+				*/
+				function bar() {}',
+				'<?php
+
+				function foo(){}
+				function bar(){}'
+			],
 		];
 	}
 }

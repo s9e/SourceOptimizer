@@ -7,6 +7,7 @@
 */
 namespace s9e\SourceOptimizer\Passes;
 
+use s9e\SourceOptimizer\Helper;
 use s9e\SourceOptimizer\Pass;
 use s9e\SourceOptimizer\TokenStream;
 
@@ -53,6 +54,7 @@ class RemoveComments extends Pass
 		{
 			$this->removeComments();
 		}
+		Helper::mergeWhitespace($stream);
 	}
 
 	/**

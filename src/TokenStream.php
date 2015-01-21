@@ -259,27 +259,23 @@ class TokenStream implements ArrayAccess, Iterator
 	}
 
 	/**
-	* Parse/tokenize given PHP source
+	* Normalize the whitespace at the end of single-line comments
 	*
-	* @param  string $src
+	* Will remove the newline at the end of single-line comments and put it either in the next token
+	* if it's a T_WHITESPACE or it will insert a T_WHITESPACE otherwise.
+	*
 	* @return void
 	*/
-	protected function parse($src)
+	protected function normalizeSingleLineComments()
 	{
-		$this->tokens = token_get_all($src);
 		$keys = [];
-		foreach ($this->tokens as $k => &$token)
+		foreach ($this->tokens as $k => $token)
 		{
-			if (is_array($token))
+			// Remove the newline at the end of comments to put it in the next token
+			if ($token[0] === T_COMMENT && $token[1][1] === '/')
 			{
-				unset($token[2]);
-
-				// Remove the newline at the end of comments to put it in the next token
-				if ($token[0] === T_COMMENT && $token[1][1] === '/')
-				{
-					$token[1] = rtrim($token[1], "\n");
-					$keys[] = $k + 1;
-				}
+				$this->tokens[$k][1] = rtrim($token[1], "\n");
+				$keys[] = $k + 1;
 			}
 		}
 
@@ -294,6 +290,25 @@ class TokenStream implements ArrayAccess, Iterator
 				array_splice($this->tokens, $k, 0, [[T_WHITESPACE, "\n"]]);
 			}
 		}
+	}
+
+	/**
+	* Parse/tokenize given PHP source
+	*
+	* @param  string $src
+	* @return void
+	*/
+	protected function parse($src)
+	{
+		$this->tokens = token_get_all($src);
+		foreach ($this->tokens as $k => &$token)
+		{
+			if (is_array($token))
+			{
+				unset($token[2]);
+			}
+		}
+		$this->normalizeSingleLineComments();
 
 		$this->cnt = count($this->tokens);
 		$this->offset = 0;

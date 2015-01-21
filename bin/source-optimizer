@@ -293,26 +293,29 @@ class TokenStream implements ArrayAccess,Iterator
 		while(++$this->offset<$this->cnt&&!isset($this->tokens[$this->offset]));
 	}
 
-	protected function parse($src)
+	protected function normalizeSingleLineComments()
 	{
-		$this->tokens=\token_get_all($src);
 		$keys=[];
-		foreach($this->tokens as$k=>&$token)
-			if(\is_array($token))
+		foreach($this->tokens as$k=>$token)
+			if($token[0]===\T_COMMENT&&$token[1][1]==='/')
 			{
-				unset($token[2]);
-
-				if($token[0]===\T_COMMENT&&$token[1][1]==='/')
-				{
-					$token[1]=\rtrim($token[1],"\n");
-					$keys[]=$k+1;
-				}
+				$this->tokens[$k][1]=\rtrim($token[1],"\n");
+				$keys[]=$k+1;
 			}
 		foreach(\array_reverse($keys)as$k)
 			if(isset($this->tokens[$k])&&$this->tokens[$k][0]===\T_WHITESPACE)
 				$this->tokens[$k][1]="\n".$this->tokens[$k][1];
 			else
 				\array_splice($this->tokens,$k,0,[[\T_WHITESPACE,"\n"]]);
+	}
+
+	protected function parse($src)
+	{
+		$this->tokens=\token_get_all($src);
+		foreach($this->tokens as$k=>&$token)
+			if(\is_array($token))
+				unset($token[2]);
+		$this->normalizeSingleLineComments();
 		$this->cnt=\count($this->tokens);
 		$this->offset=0;
 		$this->needsReparsing=\false;

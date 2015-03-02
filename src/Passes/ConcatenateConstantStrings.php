@@ -22,10 +22,6 @@ class ConcatenateConstantStrings extends Pass
 		{
 			$offset = $stream->key();
 			$left   = $stream->currentText();
-			if (substr($left, 0, 1) !== "'")
-			{
-				continue;
-			}
 			$stream->next();
 			$stream->skipNoise();
 			if (!$stream->is('.'))
@@ -34,11 +30,11 @@ class ConcatenateConstantStrings extends Pass
 			}
 			$stream->next();
 			$stream->skipNoise();
-			if (!$stream->is(T_CONSTANT_ENCAPSED_STRING) || substr($stream->currentText(), 0, 1) !== "'")
+			$right = $stream->currentText();
+			if (!$stream->is(T_CONSTANT_ENCAPSED_STRING) || $left[0] !== $right[0])
 			{
 				continue;
 			}
-			$right = $stream->currentText();
 			$stream->replace([T_CONSTANT_ENCAPSED_STRING, substr($left, 0, -1) . substr($right, 1)]);
 			$i = $stream->key();
 			$stream->seek($i - 1);

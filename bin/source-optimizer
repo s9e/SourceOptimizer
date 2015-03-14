@@ -30,7 +30,7 @@ class CommandLineRunner
 	}
 	protected static function getTargets()
 	{
-		return \array_slice($_SERVER['argv'],1);
+		return\array_slice($_SERVER['argv'],1);
 	}
 	protected static function preload($dir)
 	{
@@ -121,11 +121,11 @@ class Optimizer
 	protected$passes=[];
 	public function __construct()
 	{
-		$this->enable('RemoveComments');
-		$this->enable('RemoveWhitespace');
 		$this->enable('ConcatenateConstantStrings');
 		$this->enable('EnforceFQN');
 		$this->enable('OptimizeControlStructures');
+		$this->enable('RemoveComments');
+		$this->enable('RemoveWhitespace');
 	}
 	public function disable($passName)
 	{
@@ -221,18 +221,18 @@ class TokenStream implements ArrayAccess,Iterator
 		$prevToken=$this->lookbehind();
 		$nextToken=$this->lookahead();
 		if($prevToken===\false||$nextToken===\false)
-			return \true;
+			return\true;
 		if(\is_array($prevToken))
 		{
 			if($prevToken[0]===\T_COMMENT&&\substr($prevToken[1],0,2)==='//')
-				return \false;
+				return\false;
 			$prevToken=$prevToken[1];
 		}
 		if(\is_array($nextToken))
 			$nextToken=$nextToken[1];
 		$str=$prevToken.' '.$nextToken;
 		if(\in_array($str,$this->excludeExact,\true))
-			return \false;
+			return\false;
 		$delimiters="\t\n\r !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~";
 		$prevChar=\substr($prevToken,-1);
 		$nextChar=$nextToken[0];
@@ -244,7 +244,7 @@ class TokenStream implements ArrayAccess,Iterator
 	}
 	public function isAny(array$tokenValues)
 	{
-		return \in_array($this->tokens[$this->offset][0],$tokenValues,\true);
+		return\in_array($this->tokens[$this->offset][0],$tokenValues,\true);
 	}
 	public function offsetExists($offset)
 	{
@@ -273,7 +273,7 @@ class TokenStream implements ArrayAccess,Iterator
 	}
 	public function isNoise()
 	{
-		return \in_array($this->tokens[$this->offset][0],[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true);
+		return\in_array($this->tokens[$this->offset][0],[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true);
 	}
 	public function key()
 	{
@@ -285,7 +285,7 @@ class TokenStream implements ArrayAccess,Iterator
 		while(++$i<$this->cnt)
 			if(isset($this->tokens[$i]))
 				return$this->tokens[$i];
-		return \false;
+		return\false;
 	}
 	public function lookbehind()
 	{
@@ -293,7 +293,7 @@ class TokenStream implements ArrayAccess,Iterator
 		while(--$i>=0)
 			if(isset($this->tokens[$i]))
 				return$this->tokens[$i];
-		return \false;
+		return\false;
 	}
 	public function next()
 	{
@@ -388,15 +388,15 @@ class TokenStream implements ArrayAccess,Iterator
 	{
 		while(++$this->offset<$this->cnt)
 			if(isset($this->tokens[$this->offset][0])&&$this->tokens[$this->offset][0]===$tokenValue)
-				return \true;
-		return \false;
+				return\true;
+		return\false;
 	}
 	public function skipToToken($token)
 	{
 		while(++$this->offset<$this->cnt)
 			if(isset($this->tokens[$this->offset])&&$this->tokens[$this->offset]===$token)
-				return \true;
-		return \false;
+				return\true;
+		return\false;
 	}
 	public function valid()
 	{
@@ -504,11 +504,11 @@ class EnforceFQN extends Pass
 		{
 			$tokenValue=$this->stream[$offset][0];
 			if(\in_array($tokenValue,[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE],\true))
-				return \true;
+				return\true;
 			if(!\in_array($tokenValue,[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true))
 				break;
 		}
-		return \false;
+		return\false;
 	}
 	protected function optimizeBlock($startOffset,$endOffset)
 	{
@@ -637,7 +637,7 @@ class OptimizeControlStructures extends Pass
 			$this->skipParenthesizedExpression();
 		$this->stream->skipNoise();
 		if($this->stream->current()!=='{'||$this->isFollowedByDeclaraction())
-			return \false;
+			return\false;
 		$braces=0;
 		$structure['offsetLeftBrace']=$this->stream->key();
 		while($this->stream->valid())

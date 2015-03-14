@@ -21,11 +21,11 @@ class Optimizer
 	*/
 	public function __construct()
 	{
-		$this->enable('RemoveComments');
-		$this->enable('RemoveWhitespace');
 		$this->enable('ConcatenateConstantStrings');
 		$this->enable('EnforceFQN');
 		$this->enable('OptimizeControlStructures');
+		$this->enable('RemoveComments');
+		$this->enable('RemoveWhitespace');
 	}
 
 	/**

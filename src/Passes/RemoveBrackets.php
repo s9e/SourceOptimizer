@@ -16,7 +16,7 @@ use s9e\SourceOptimizer\TokenStream;
 * Removes brackets in control structures wherever possible. Prevents the generation of EXT_STMT
 * opcodes where they're not strictly required.
 */
-class OptimizeControlStructures extends Pass
+class RemoveBrackets extends Pass
 {
 	/**
 	* @var array Offsets of braces that need to be preserved (offsets used as keys)

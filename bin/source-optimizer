@@ -123,7 +123,7 @@ class Optimizer
 	{
 		$this->enable('ConcatenateConstantStrings');
 		$this->enable('EnforceFQN');
-		$this->enable('OptimizeControlStructures');
+		$this->enable('RemoveBrackets');
 		$this->enable('RemoveComments');
 		$this->enable('RemoveWhitespace');
 	}
@@ -546,7 +546,7 @@ class EnforceFQN extends Pass
 namespace s9e\SourceOptimizer\Passes;
 use s9e\SourceOptimizer\Pass;
 use s9e\SourceOptimizer\TokenStream;
-class OptimizeControlStructures extends Pass
+class RemoveBrackets extends Pass
 {
 	protected$preservedBraces;
 	protected$stream;

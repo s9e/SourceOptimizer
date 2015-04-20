@@ -23,7 +23,7 @@ class Optimizer
 	{
 		$this->enable('ConcatenateConstantStrings');
 		$this->enable('EnforceFQN');
-		$this->enable('OptimizeControlStructures');
+		$this->enable('RemoveBrackets');
 		$this->enable('RemoveComments');
 		$this->enable('RemoveWhitespace');
 	}

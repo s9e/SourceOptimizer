@@ -6,8 +6,8 @@ use PHPUnit_Framework_TestCase;
 use s9e\SourceOptimizer\Tests\PassTest;
 
 /**
-* @covers s9e\SourceOptimizer\Passes\RemoveBrackets
+* @covers s9e\SourceOptimizer\Passes\RemoveBraces
 */
-class RemoveBracketsTest extends PassTest
+class RemoveBracesTest extends PassTest
 {
 }

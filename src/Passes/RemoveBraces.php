@@ -13,10 +13,10 @@ use s9e\SourceOptimizer\TokenStream;
 /**
 * Optimizes the control structures of a script.
 *
-* Removes brackets in control structures wherever possible. Prevents the generation of EXT_STMT
+* Removes braces in control structures wherever possible. Prevents the generation of EXT_STMT
 * opcodes where they're not strictly required.
 */
-class RemoveBrackets extends Pass
+class RemoveBraces extends Pass
 {
 	/**
 	* @var array Offsets of braces that need to be preserved (offsets used as keys)

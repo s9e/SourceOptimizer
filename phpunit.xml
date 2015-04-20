@@ -19,7 +19,7 @@
 			<file>tests/Passes/ConcatenateConstantStringsTest.php</file>
 			<file>tests/Passes/EnforceFQNTest.php</file>
 			<file>tests/Passes/RemoveCommentsTest.php</file>
-			<file>tests/Passes/RemoveBracketsTest.php</file>
+			<file>tests/Passes/RemoveBracesTest.php</file>
 			<file>tests/Passes/RemoveWhitespaceTest.php</file>
 		</testsuite>
 	</testsuites>

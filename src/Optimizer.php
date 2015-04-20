@@ -59,7 +59,6 @@ class Optimizer
 	public function enable($passName, array $options = [])
 	{
 		$className = __NAMESPACE__ . '\\Passes\\' . $passName;
-
 		if (!class_exists($className))
 		{
 			trigger_error("Pass '" . $passName . "' does not exist");
@@ -126,7 +125,6 @@ class Optimizer
 	{
 		$old = file_get_contents($filepath);
 		$new = $this->optimize($old);
-
 		if ($new !== $old)
 		{
 			file_put_contents($filepath, $new);

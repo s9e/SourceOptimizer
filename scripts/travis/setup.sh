@@ -9,7 +9,7 @@ if [ "$TRAVIS_PHP_VERSION" = "5.6" ]
 then
 	echo "Installing Scrutinizer"
 	./installScrutinizer.sh
-elif [ "$TRAVIS_PHP_VERSION" != "hhvm" ]
+elif [ "$TRAVIS_PHP_VERSION" != "hhvm" ] && [ "$TRAVIS_PHP_VERSION" != "nightly" ]
 then
 	echo "Removing XDebug"
 	phpenv config-rm xdebug.ini

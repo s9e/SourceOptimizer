@@ -54,16 +54,18 @@ abstract class ContextHelper
 			$namespaces[$offset] = $namespace;
 		}
 
+		$i = 0;
 		$blocks = [];
 		foreach ($namespaces as $offset => $namespace)
 		{
-			if ($blocks)
+			if ($i > 0)
 			{
-				$blocks[count($blocks) - 1][2] = $offset - 1;
+				$blocks[$i - 1][2] = $offset - 1;
 			}
 			$blocks[] = [$namespace, $offset];
+			++$i;
 		}
-		$blocks[count($blocks) - 1][2] = $stream->key() - 1;
+		$blocks[$i - 1][2] = $stream->key() - 1;
 
 		return $blocks;
 	}

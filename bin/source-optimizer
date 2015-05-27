@@ -581,8 +581,10 @@ use s9e\SourceOptimizer\Pass;
 use s9e\SourceOptimizer\TokenStream;
 class MinifyVars extends Pass
 {
+	protected$cnt;
 	public$preserveRegexp='(^\\$(?:\\$|__|(?:GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
 	protected$stream;
+	protected$varNames;
 	public function optimize(TokenStream$stream)
 	{
 		$this->stream=$stream;
@@ -594,13 +596,13 @@ class MinifyVars extends Pass
 			}
 		);
 	}
-	protected function getVarName($varName)
+	protected function getName($varName)
 	{
 		if(\preg_match($this->preserveRegexp,$varName))
 			return$varName;
-		return$this->generateVarName();
+		return$this->generateName();
 	}
-	protected function generateVarName()
+	protected function generateName()
 	{
 		$n=$this->cnt;
 		$chars='_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -616,17 +618,17 @@ class MinifyVars extends Pass
 	}
 	protected function optimizeBlock($startOffset,$endOffset)
 	{
-		$this->resetVarNames();
+		$this->resetNames();
 		$this->stream->seek($startOffset);
 		while($this->stream->skipTo(\T_VARIABLE)&&$this->stream->key()<=$endOffset)
 		{
 			$varName=$this->stream->currentText();
 			if(!isset($this->varNames[$varName]))
-				$this->varNames[$varName]=$this->getVarName($varName);
+				$this->varNames[$varName]=$this->getName($varName);
 			$this->stream->replace([\T_VARIABLE,$this->varNames[$varName]]);
 		}
 	}
-	protected function resetVarNames()
+	protected function resetNames()
 	{
 		$this->cnt=0;
 		$this->varNames=[];

@@ -18,6 +18,7 @@
 			<file>tests/OptimizerTest.php</file>
 			<file>tests/Passes/ConcatenateConstantStringsTest.php</file>
 			<file>tests/Passes/EnforceFQNTest.php</file>
+			<file>tests/Passes/MinifyVarsTest.php</file>
 			<file>tests/Passes/RemoveCommentsTest.php</file>
 			<file>tests/Passes/RemoveBracesTest.php</file>
 			<file>tests/Passes/RemoveWhitespaceTest.php</file>

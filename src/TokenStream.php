@@ -53,8 +53,7 @@ class TokenStream implements ArrayAccess, Iterator
 	/**
 	* Constructor
 	*
-	* @param  string $src Original source code
-	* @return 
+	* @param string $src Original source code
 	*/
 	public function __construct($src)
 	{

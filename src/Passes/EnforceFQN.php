@@ -29,9 +29,7 @@ class EnforceFQN extends Pass
 	protected $stream;
 
 	/**
-	* Construct
-	*
-	* @return void
+	* Constructor
 	*/
 	public function __construct()
 	{

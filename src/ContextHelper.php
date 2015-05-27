@@ -25,6 +25,58 @@ abstract class ContextHelper
 	}
 
 	/**
+	* Execute given callback on each function block in given stream
+	*
+	* @param  TokenStream $stream   Token stream
+	* @param  callable    $callback Callback
+	* @return void
+	*/
+	public static function forEachFunction(TokenStream $stream, callable $callback)
+	{
+		foreach (self::getFunctionBlocks($stream) as $block)
+		{
+			call_user_func_array($callback, $block);
+		}
+	}
+
+	/**
+	* Get the list of function blocks in given stream
+	*
+	* @param  TokenStream $stream Token stream
+	* @return array[]             List of arrays of [start, end] offsets
+	*/
+	public static function getFunctionBlocks(TokenStream $stream)
+	{
+		$blocks = [];
+		$stream->reset();
+		while ($stream->skipTo(T_FUNCTION))
+		{
+			$offset = $stream->key();
+			$stream->skipToToken('{');
+			$cnt = 0;
+			while ($stream->valid())
+			{
+				$token = $stream->current();
+				if ($token === '{')
+				{
+					++$cnt;
+				}
+				elseif ($token === '}')
+				{
+					if (--$cnt === 0)
+					{
+						$blocks[] = [$offset, $stream->key()];
+						break;
+					}
+				}
+				$stream->next();
+			}
+		}
+
+		return $blocks;
+	}
+
+	/**
 	* Get the list of namespaces in given stream
 	*
 	* @param  TokenStream $stream Token stream

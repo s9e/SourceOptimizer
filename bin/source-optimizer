@@ -52,6 +52,36 @@ abstract class ContextHelper
 		foreach(self::getNamespaces($stream)as$block)
 			\call_user_func_array($callback,$block);
 	}
+	public static function forEachFunction(TokenStream$stream,callable$callback)
+	{
+		foreach(self::getFunctionBlocks($stream)as$block)
+			\call_user_func_array($callback,$block);
+	}
+	public static function getFunctionBlocks(TokenStream$stream)
+	{
+		$blocks=[];
+		$stream->reset();
+		while($stream->skipTo(\T_FUNCTION))
+		{
+			$offset=$stream->key();
+			$stream->skipToToken('{');
+			$cnt=0;
+			while($stream->valid())
+			{
+				$token=$stream->current();
+				if($token==='{')
+					++$cnt;
+				elseif($token==='}')
+					if(--$cnt===0)
+					{
+						$blocks[]=[$offset,$stream->key()];
+						break;
+					}
+				$stream->next();
+			}
+		}
+		return$blocks;
+	}
 	public static function getNamespaces(TokenStream$stream)
 	{
 		$namespaces=[''];
@@ -538,6 +568,68 @@ class EnforceFQN extends Pass
 		if(!isset($this->functions[$funcName]))
 			return;
 		$this->stream->replace([\T_STRING,'\\'.$funcName]);
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2015 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\ContextHelper;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class MinifyVars extends Pass
+{
+	public$preserveRegexp='(^\\$(?:\\$|__|(?:GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
+	protected$stream;
+	public function optimize(TokenStream$stream)
+	{
+		$this->stream=$stream;
+		ContextHelper::forEachFunction(
+			$this->stream,
+			function($startOffset,$endOffset)
+			{
+				$this->optimizeBlock($startOffset,$endOffset);
+			}
+		);
+	}
+	protected function getVarName($varName)
+	{
+		if(\preg_match($this->preserveRegexp,$varName))
+			return$varName;
+		return$this->generateVarName();
+	}
+	protected function generateVarName()
+	{
+		$n=$this->cnt;
+		$chars='_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+		$this->cnt+=($this->cnt%63<52)?1:11;
+		$varName='$';
+		do
+		{
+			$varName.=$chars[$n%63];
+			$n=\floor($n/63);
+		}
+		while($n>0);
+		return$varName;
+	}
+	protected function optimizeBlock($startOffset,$endOffset)
+	{
+		$this->resetVarNames();
+		$this->stream->seek($startOffset);
+		while($this->stream->skipTo(\T_VARIABLE)&&$this->stream->key()<=$endOffset)
+		{
+			$varName=$this->stream->currentText();
+			if(!isset($this->varNames[$varName]))
+				$this->varNames[$varName]=$this->getVarName($varName);
+			$this->stream->replace([\T_VARIABLE,$this->varNames[$varName]]);
+		}
+	}
+	protected function resetVarNames()
+	{
+		$this->cnt=0;
+		$this->varNames=[];
 	}
 }
 /**

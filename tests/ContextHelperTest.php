@@ -9,6 +9,33 @@ use s9e\SourceOptimizer\TokenStream;
 class ContextHelperTest extends PHPUnit_Framework_TestCase
 {
 	/**
+	* @dataProvider getGetFunctionBlocksTests
+	*/
+	public function testGetFunctionBlocks($php, $expected)
+	{
+		$tokenStream = new TokenStream($php);
+		$this->assertEquals($expected, ContextHelper::getFunctionBlocks($tokenStream));
+	}
+
+	public function getGetFunctionBlocksTests()
+	{
+		return [
+			[
+				'<?php $a=1;',
+				[]
+			],
+			[
+				'<?php function foo(){}',
+				[[1, 7]]
+			],
+			[
+				'<?php function foo(){} function bar() { /**/ }',
+				[[1, 7], [9, 19]]
+			],
+		];
+	}
+
+	/**
 	* @dataProvider getGetNamespacesTests
 	*/
 	public function testGetNamespaces($php, $expected)

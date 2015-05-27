@@ -99,14 +99,26 @@ class MinifyVars extends Pass
 	{
 		$this->resetNames();
 		$this->stream->seek($startOffset);
-		while ($this->stream->skipTo(T_VARIABLE) && $this->stream->key() <= $endOffset)
+		while ($this->stream->valid() && $this->stream->key() <= $endOffset)
 		{
-			$varName = $this->stream->currentText();
-			if (!isset($this->varNames[$varName]))
+			// Skip the next significant token after a double colon, e.g. foo::$bar
+			if ($this->stream->is(T_DOUBLE_COLON))
 			{
-				$this->varNames[$varName] = $this->getName($varName);
+				$this->stream->next();
+				$this->stream->skipNoise();
+				$this->stream->next();
+				continue;
 			}
-			$this->stream->replace([T_VARIABLE, $this->varNames[$varName]]);
+			if ($this->stream->is(T_VARIABLE))
+			{
+				$varName = $this->stream->currentText();
+				if (!isset($this->varNames[$varName]))
+				{
+					$this->varNames[$varName] = $this->getName($varName);
+				}
+				$this->stream->replace([T_VARIABLE, $this->varNames[$varName]]);
+			}
+			$this->stream->next();
 		}
 	}
 

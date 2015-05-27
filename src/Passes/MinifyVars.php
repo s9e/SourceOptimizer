@@ -21,7 +21,7 @@ class MinifyVars extends Pass
 	/**
 	* @var string Regexp that matches variable names that need to be preserved
 	*/
-	public $preserveRegexp = '(^\\$(?:\\$|__|(?:GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
+	public $preserveRegexp = '(^\\$(?:\\$|__|(?:this|GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
 
 	/**
 	* @var TokenStream Token stream of the source being processed

@@ -17,6 +17,7 @@ class CommandLineRunner
 	{
 		self::autoload();
 		$optimizer=new Optimizer;
+		$optimizer->enable('MinifyVars');
 		foreach(self::getTargets()as$path)
 		{
 			if(!\file_exists($path))
@@ -582,7 +583,7 @@ use s9e\SourceOptimizer\TokenStream;
 class MinifyVars extends Pass
 {
 	protected$cnt;
-	public$preserveRegexp='(^\\$(?:\\$|__|(?:GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
+	public$preserveRegexp='(^\\$(?:\\$|__|(?:this|GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
 	protected$stream;
 	protected$varNames;
 	public function optimize(TokenStream$stream)

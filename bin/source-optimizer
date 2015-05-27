@@ -597,11 +597,17 @@ class MinifyVars extends Pass
 			}
 		);
 	}
+	protected function canBeMinified()
+	{
+		if(!$this->stream->is(\T_VARIABLE))
+			return\false;
+		return!\preg_match($this->preserveRegexp,$this->stream->currentText());
+	}
 	protected function getName($varName)
 	{
-		if(\preg_match($this->preserveRegexp,$varName))
-			return$varName;
-		return$this->generateName();
+		if(!isset($this->varNames[$varName]))
+			$this->varNames[$varName]=$this->generateName();
+		return$this->varNames[$varName];
 	}
 	protected function generateName()
 	{
@@ -627,15 +633,11 @@ class MinifyVars extends Pass
 			{
 				$this->stream->next();
 				$this->stream->skipNoise();
-				$this->stream->next();
-				continue;
 			}
-			if($this->stream->is(\T_VARIABLE))
+			elseif($this->canBeMinified())
 			{
 				$varName=$this->stream->currentText();
-				if(!isset($this->varNames[$varName]))
-					$this->varNames[$varName]=$this->getName($varName);
-				$this->stream->replace([\T_VARIABLE,$this->varNames[$varName]]);
+				$this->stream->replace([\T_VARIABLE,$this->getName($varName)]);
 			}
 			$this->stream->next();
 		}

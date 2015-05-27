@@ -49,6 +49,21 @@ class MinifyVars extends Pass
 	}
 
 	/**
+	* Test whether current token is a variable that can be minified
+	*
+	* @return bool
+	*/
+	protected function canBeMinified()
+	{
+		if (!$this->stream->is(T_VARIABLE))
+		{
+			return false;
+		}
+
+		return !preg_match($this->preserveRegexp, $this->stream->currentText());
+	}
+
+	/**
 	* Generate a minified name for given variable
 	*
 	* @param  string $varName Original variable
@@ -56,12 +71,12 @@ class MinifyVars extends Pass
 	*/
 	protected function getName($varName)
 	{
-		if (preg_match($this->preserveRegexp, $varName))
+		if (!isset($this->varNames[$varName]))
 		{
-			return $varName;
+			$this->varNames[$varName] = $this->generateName();
 		}
 
-		return $this->generateName();
+		return $this->varNames[$varName];
 	}
 
 	/**
@@ -101,22 +116,16 @@ class MinifyVars extends Pass
 		$this->stream->seek($startOffset);
 		while ($this->stream->valid() && $this->stream->key() <= $endOffset)
 		{
-			// Skip the next significant token after a double colon, e.g. foo::$bar
 			if ($this->stream->is(T_DOUBLE_COLON))
 			{
+				// Prepare to skip the next significant token after a double colon, e.g. foo::$bar
 				$this->stream->next();
 				$this->stream->skipNoise();
-				$this->stream->next();
-				continue;
 			}
-			if ($this->stream->is(T_VARIABLE))
+			elseif ($this->canBeMinified())
 			{
 				$varName = $this->stream->currentText();
-				if (!isset($this->varNames[$varName]))
-				{
-					$this->varNames[$varName] = $this->getName($varName);
-				}
-				$this->stream->replace([T_VARIABLE, $this->varNames[$varName]]);
+				$this->stream->replace([T_VARIABLE, $this->getName($varName)]);
 			}
 			$this->stream->next();
 		}

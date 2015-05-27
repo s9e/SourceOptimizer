@@ -104,6 +104,33 @@ class MinifyVars extends Pass
 	}
 
 	/**
+	* Handle the current double colon token
+	*
+	* @return void
+	*/
+	protected function handleDoubleColon()
+	{
+		// Save the offset of the double colon then go to the next significant token, e.g. foo::$bar
+		$offset = $this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		if (!$this->stream->is(T_VARIABLE))
+		{
+			return;
+		}
+
+		// Test whether the variable is followed by a parenthesis. If so, that makes it a dynamic
+		// method call and we should minify the variable
+		$this->stream->next();
+		$this->stream->skipNoise();
+		if ($this->stream->current() === '(')
+		{
+			// Rewind to the double colon
+			$this->stream->seek($offset);
+		}
+	}
+
+	/**
 	* Minify variables in given function block
 	*
 	* @param  integer $startOffset
@@ -118,9 +145,7 @@ class MinifyVars extends Pass
 		{
 			if ($this->stream->is(T_DOUBLE_COLON))
 			{
-				// Prepare to skip the next significant token after a double colon, e.g. foo::$bar
-				$this->stream->next();
-				$this->stream->skipNoise();
+				$this->handleDoubleColon();
 			}
 			elseif ($this->canBeMinified())
 			{

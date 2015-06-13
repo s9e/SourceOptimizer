@@ -17,7 +17,6 @@ class CommandLineRunner
 	{
 		self::autoload();
 		$optimizer=new Optimizer;
-		$optimizer->enable('MinifyVars');
 		foreach(self::getTargets()as$path)
 		{
 			if(!\file_exists($path))

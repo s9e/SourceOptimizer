@@ -14,5 +14,10 @@
 			"s9e\\SourceOptimizer\\": "src"
 		}
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"s9e\\SourceOptimizer\\Tests\\": "tests"
+		}
+	},
 	"bin": ["bin/source-optimizer"]
 }

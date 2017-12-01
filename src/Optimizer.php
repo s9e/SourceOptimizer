@@ -86,19 +86,7 @@ class Optimizer
 			$pass->optimize($stream);
 		}
 
-		$php = $stream->serialize();
-		$php = str_replace(
-			'public function __call($method,array$args)',
-			'public function __call($method, array $args)',
-			$php
-		);
-		$php = str_replace(
-			'public static function __callStatic($method,array$args)',
-			'public static function __callStatic($method, array $args)',
-			$php
-		);
-
-		return $php;
+		return $stream->serialize();
 	}
 
 	/**

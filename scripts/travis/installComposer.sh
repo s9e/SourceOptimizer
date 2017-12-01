@@ -3,7 +3,7 @@
 cd $(dirname "$0")
 cd ../..
 
-if [ "$TRAVIS_PHP_VERSION" = "5.6" ]
+if [ "$TRAVIS_PHP_VERSION" = "7.1" ]
 then
 	composer require -q --no-interaction "satooshi/php-coveralls:*"
 fi

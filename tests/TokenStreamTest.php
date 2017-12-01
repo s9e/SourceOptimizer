@@ -2,10 +2,10 @@
 
 namespace s9e\SourceOptimizer\Tests;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use s9e\SourceOptimizer\TokenStream;
 
-class TokenStreamTest extends PHPUnit_Framework_TestCase
+class TokenStreamTest extends TestCase
 {
 	/**
 	* @testdox Can be read using array notation

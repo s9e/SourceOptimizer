@@ -2,11 +2,11 @@
 
 namespace s9e\SourceOptimizer\Tests;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use s9e\SourceOptimizer\ContextHelper;
 use s9e\SourceOptimizer\TokenStream;
 
-class ContextHelperTest extends PHPUnit_Framework_TestCase
+class ContextHelperTest extends TestCase
 {
 	/**
 	* @dataProvider getGetFunctionBlocksTests

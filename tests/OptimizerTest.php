@@ -2,13 +2,13 @@
 
 namespace s9e\SourceOptimizer\Tests;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use s9e\SourceOptimizer\Optimizer;
 
 /**
 * @covers s9e\SourceOptimizer\Optimizer
 */
-class OptimizerTest extends PHPUnit_Framework_TestCase
+class OptimizerTest extends TestCase
 {
 	/**
 	* @dataProvider getOptimizeTests

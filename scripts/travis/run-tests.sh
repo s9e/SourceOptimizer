@@ -3,9 +3,9 @@
 cd $(dirname "$0")
 cd ../..
 
-if [ "$TRAVIS_PHP_VERSION" = "5.6" ]
+if [ "$TRAVIS_PHP_VERSION" = "7.1" ]
 then
-	phpunit --coverage-clover /tmp/clover.xml
+	./vendor/bin/phpunit --coverage-clover /tmp/clover.xml
 else
-	phpunit
+	./vendor/bin/phpunit
 fi

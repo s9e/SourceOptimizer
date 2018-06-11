@@ -2,7 +2,7 @@
 <?php
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -41,7 +41,7 @@ class CommandLineRunner
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -118,7 +118,7 @@ abstract class ContextHelper
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -144,7 +144,7 @@ abstract class Helper
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -204,7 +204,7 @@ class Optimizer
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -214,7 +214,7 @@ abstract class Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -426,7 +426,7 @@ class TokenStream implements ArrayAccess,Iterator
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer;
@@ -437,7 +437,7 @@ if(!\class_exists(__NAMESPACE__.'\\CommandLineRunner'))
 CommandLineRunner::run();
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
@@ -471,7 +471,7 @@ class ConcatenateConstantStrings extends Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
@@ -561,7 +561,98 @@ class EnforceFQN extends Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
+* @license   http://www.opensource.org/licenses/mit-license.php The MIT License
+*/
+namespace s9e\SourceOptimizer\Passes;
+use s9e\SourceOptimizer\ContextHelper;
+use s9e\SourceOptimizer\Pass;
+use s9e\SourceOptimizer\TokenStream;
+class EvaluatePureFunctions extends Pass
+{
+	protected$functions=[
+		'htmlspecialchars'
+	];
+	protected$stream;
+	public function __construct()
+	{
+		$this->constants=\get_defined_constants();
+		$this->functions=\array_flip(\get_defined_functions()['internal']);
+	}
+	public function optimize(TokenStream$stream)
+	{
+		$this->stream=$stream;
+		ContextHelper::forEachNamespace(
+			$this->stream,
+			function($namespace,$startOffset,$endOffset)
+			{
+				if($namespace!=='')
+					$this->optimizeBlock($startOffset,$endOffset);
+			}
+		);
+	}
+	protected function isFollowedByOperator()
+	{
+		$offset=$this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByOperator=($this->stream->valid()&&$this->stream->isAny([\T_NS_SEPARATOR,\T_PAAMAYIM_NEKUDOTAYIM]));
+		$this->stream->seek($offset);
+		return$isFollowedByOperator;
+	}
+	protected function isFollowedByParenthesis()
+	{
+		$offset=$this->stream->key();
+		$this->stream->next();
+		$this->stream->skipNoise();
+		$isFollowedByParenthesis=($this->stream->valid()&&$this->stream->current()==='(');
+		$this->stream->seek($offset);
+		return$isFollowedByParenthesis;
+	}
+	protected function isPrecededByKeyword()
+	{
+		$offset=$this->stream->key();
+		while(--$offset>0)
+		{
+			$tokenValue=$this->stream[$offset][0];
+			if(\in_array($tokenValue,[\T_CLASS,\T_CONST,\T_FUNCTION,\T_INTERFACE,\T_NEW,\T_NS_SEPARATOR,\T_OBJECT_OPERATOR,\T_PAAMAYIM_NEKUDOTAYIM,\T_TRAIT,\T_USE],\true))
+				return\true;
+			if(!\in_array($tokenValue,[\T_COMMENT,\T_DOC_COMMENT,\T_WHITESPACE],\true))
+				break;
+		}
+		return\false;
+	}
+	protected function optimizeBlock($startOffset,$endOffset)
+	{
+		$this->stream->seek($startOffset);
+		while($this->stream->skipTo(\T_STRING)&&$this->stream->key()<=$endOffset)
+		{
+			if($this->isPrecededByKeyword()||$this->isFollowedByOperator())
+				continue;
+			if($this->isFollowedByParenthesis())
+				$this->processFunctionCall();
+			else
+				$this->processConstant();
+		}
+	}
+	protected function processConstant()
+	{
+		$constName=$this->stream->currentText();
+		if(!isset($this->constants[$constName])&&!\preg_match('(^(?:false|null|true)$)Di',$constName))
+			return;
+		$this->stream->replace([\T_STRING,'\\'.$constName]);
+	}
+	protected function processFunctionCall()
+	{
+		$funcName=$this->stream->currentText();
+		if(!isset($this->functions[$funcName]))
+			return;
+		$this->stream->replace([\T_STRING,'\\'.$funcName]);
+	}
+}
+/**
+* @package   s9e\SourceOptimizer
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
@@ -647,7 +738,7 @@ class MinifyVars extends Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
@@ -853,7 +944,7 @@ class RemoveBraces extends Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;
@@ -930,7 +1021,7 @@ class RemoveComments extends Pass
 }
 /**
 * @package   s9e\SourceOptimizer
-* @copyright Copyright (c) 2014-2017 The s9e Authors
+* @copyright Copyright (c) 2014-2018 The s9e Authors
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 namespace s9e\SourceOptimizer\Passes;

@@ -1,6 +1,6 @@
 {
 	"name": "s9e/source-optimizer",
-	"version": "0.3",
+	"version": "0.4-dev",
 	"type": "library",
 	"description": "",
 	"homepage": "https://github.com/s9e/SourceOptimizer/",

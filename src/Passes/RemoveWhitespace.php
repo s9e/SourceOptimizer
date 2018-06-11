@@ -7,10 +7,7 @@
 */
 namespace s9e\SourceOptimizer\Passes;
 
-use s9e\SourceOptimizer\Pass;
-use s9e\SourceOptimizer\TokenStream;
-
-class RemoveWhitespace extends Pass
+class RemoveWhitespace extends AbstractPass
 {
 	/**
 	* @var bool Whether to remove blank lines from the source
@@ -30,19 +27,19 @@ class RemoveWhitespace extends Pass
 	/**
 	* {@inheritdoc}
 	*/
-	public function optimize(TokenStream $stream)
+	protected function optimizeStream()
 	{
 		$regexp = $this->getRegexp();
-		while ($stream->skipTo(T_WHITESPACE))
+		while ($this->stream->skipTo(T_WHITESPACE))
 		{
-			$ws = $stream->currentText();
-			if ($this->removeSameLineWhitespace && strpos($ws, "\n") === false && $stream->canRemoveCurrentToken())
+			$ws = $this->stream->currentText();
+			if ($this->removeSameLineWhitespace && strpos($ws, "\n") === false && $this->stream->canRemoveCurrentToken())
 			{
-				$stream->remove();
+				$this->stream->remove();
 				continue;
 			}
 
-			$stream->replace([T_WHITESPACE, preg_replace($regexp, "\n", $ws)]);
+			$this->stream->replace([T_WHITESPACE, preg_replace($regexp, "\n", $ws)]);
 		}
 	}
 

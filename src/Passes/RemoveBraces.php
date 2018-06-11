@@ -7,16 +7,13 @@
 */
 namespace s9e\SourceOptimizer\Passes;
 
-use s9e\SourceOptimizer\Pass;
-use s9e\SourceOptimizer\TokenStream;
-
 /**
 * Optimizes the control structures of a script.
 *
 * Removes braces in control structures wherever possible. Prevents the generation of EXT_STMT
 * opcodes where they're not strictly required.
 */
-class RemoveBraces extends Pass
+class RemoveBraces extends AbstractPass
 {
 	/**
 	* @var array Offsets of braces that need to be preserved (offsets used as keys)
@@ -24,17 +21,11 @@ class RemoveBraces extends Pass
 	protected $preservedBraces;
 
 	/**
-	* @var TokenStream Token stream of the source being processed
-	*/
-	protected $stream;
-
-	/**
 	* {@inheritdoc}
 	*/
-	public function optimize(TokenStream $stream)
+	protected function optimizeStream()
 	{
 		$this->preservedBraces = [];
-		$this->stream = $stream;
 		$structures = [];
 		while ($this->stream->valid())
 		{

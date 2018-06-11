@@ -8,10 +8,8 @@
 namespace s9e\SourceOptimizer\Passes;
 
 use s9e\SourceOptimizer\ContextHelper;
-use s9e\SourceOptimizer\Pass;
-use s9e\SourceOptimizer\TokenStream;
 
-class EnforceFQN extends Pass
+class EnforceFQN extends AbstractPass
 {
 	/**
 	* @var array List of global constants (constant names used as keys)
@@ -22,11 +20,6 @@ class EnforceFQN extends Pass
 	* @var array List of internal functions (function names used as keys)
 	*/
 	protected $functions;
-
-	/**
-	* @var TokenStream Token stream of the source being processed
-	*/
-	protected $stream;
 
 	/**
 	* Constructor
@@ -40,9 +33,8 @@ class EnforceFQN extends Pass
 	/**
 	* {@inheritdoc}
 	*/
-	public function optimize(TokenStream $stream)
+	protected function optimizeStream()
 	{
-		$this->stream = $stream;
 		ContextHelper::forEachNamespace(
 			$this->stream,
 			function ($namespace, $startOffset, $endOffset)

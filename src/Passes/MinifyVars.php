@@ -8,10 +8,8 @@
 namespace s9e\SourceOptimizer\Passes;
 
 use s9e\SourceOptimizer\ContextHelper;
-use s9e\SourceOptimizer\Pass;
-use s9e\SourceOptimizer\TokenStream;
 
-class MinifyVars extends Pass
+class MinifyVars extends AbstractPass
 {
 	/**
 	* @var integer Number of variables processed in current function block
@@ -24,11 +22,6 @@ class MinifyVars extends Pass
 	public $preserveRegexp = '(^\\$(?:\\$|__|(?:this|GLOBALS|_[A-Z]+|php_errormsg|HTTP_RAW_POST_DATA|http_response_header|arg[cv]))$)S';
 
 	/**
-	* @var TokenStream Token stream of the source being processed
-	*/
-	protected $stream;
-
-	/**
 	* @var array Map of [original name => minified name]
 	*/
 	protected $varNames;
@@ -36,9 +29,8 @@ class MinifyVars extends Pass
 	/**
 	* {@inheritdoc}
 	*/
-	public function optimize(TokenStream $stream)
+	protected function optimizeStream()
 	{
-		$this->stream = $stream;
 		ContextHelper::forEachFunction(
 			$this->stream,
 			function ($startOffset, $endOffset)

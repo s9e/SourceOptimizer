@@ -8,10 +8,8 @@
 namespace s9e\SourceOptimizer\Passes;
 
 use s9e\SourceOptimizer\Helper;
-use s9e\SourceOptimizer\Pass;
-use s9e\SourceOptimizer\TokenStream;
 
-class RemoveComments extends Pass
+class RemoveComments extends AbstractPass
 {
 	/**
 	* @var string[] List of annotations to preserve
@@ -36,16 +34,10 @@ class RemoveComments extends Pass
 	public $removeSingleLineComments = true;
 
 	/**
-	* @var TokenStream Token stream of the source being processed
-	*/
-	protected $stream;
-
-	/**
 	* {@inheritdoc}
 	*/
-	public function optimize(TokenStream $stream)
+	protected function optimizeStream()
 	{
-		$this->stream = $stream;
 		if ($this->removeDocBlocks)
 		{
 			$this->removeDocBlocks();
@@ -54,7 +46,7 @@ class RemoveComments extends Pass
 		{
 			$this->removeComments();
 		}
-		Helper::mergeWhitespace($stream);
+		Helper::mergeWhitespace($this->stream);
 	}
 
 	/**

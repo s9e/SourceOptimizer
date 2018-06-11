@@ -1,11 +1,11 @@
 <?php
 
-namespace s9e\SourceOptimizer\Tests;
+namespace s9e\SourceOptimizer\Tests\Passes;
 
 use PHPUnit\Framework\TestCase;
 use s9e\SourceOptimizer\Optimizer;
 
-abstract class PassTest extends TestCase
+abstract class AbstractPassTest extends TestCase
 {
 	/**
 	* @dataProvider getOptimizeTests
@@ -28,7 +28,7 @@ abstract class PassTest extends TestCase
 		$passName = substr($thisName, 1 + strrpos($thisName, '\\'), -4);
 
 		$tests = [];
-		foreach (glob(__DIR__ . '/Passes/' . $passName . '/*.original.php') as $original)
+		foreach (glob(__DIR__ . '/' . $passName . '/*.original.php') as $original)
 		{
 			$optimized = preg_replace('(riginal.php$)', 'ptimized.php', $original);
 			$options   = preg_replace('(riginal.php$)', 'ptions.json', $original);
